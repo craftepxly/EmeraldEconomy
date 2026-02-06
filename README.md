@@ -339,4 +339,4 @@ Special thanks to:
 
 ---
 
-**Made with ❤️ for the Minecraft community**
+**Made with ❤️ for the [Stresmen SMP S2](https://youtube.com/@stresmen)**
