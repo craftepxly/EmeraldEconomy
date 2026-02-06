@@ -339,4 +339,4 @@ Special thanks to:
 
 ---
 
-**Made with ❤️ for the [Stresmen SMP S2](https://youtube.com/@stresmen)**
+## Private plugin for [Stresmen SMP S2](https://youtube.com/@stresmen) (for now)
