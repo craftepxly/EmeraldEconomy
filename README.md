@@ -1,23 +1,128 @@
 # EmeraldEconomy Plugin
 
-**Advanced Emerald ↔ Money Converter for Minecraft Paper 1.21+**
+**Advanced Emerald ↔ Money Converter with Dynamic Economics for Minecraft Paper 1.21+**
 
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
 [![Paper](https://img.shields.io/badge/Paper-1.21+-blue.svg)](https://papermc.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-3.0-blue.svg)](CHANGELOG-v3.0.md)
 
 ## 📋 Overview
 
 EmeraldEconomy is a feature-rich Minecraft plugin that allows players to convert emeralds to in-game currency (and vice versa) through an intuitive GUI system. Built with modern Java 21 and Paper API, it features:
 
-- 💎 **Bidirectional Conversion**: Buy and sell emeralds with dynamic pricing
-- 📊 **Dynamic Pricing System**: Prices adjust based on market volume
+- 💎 **Bidirectional Conversion**: Buy and sell emeralds with advanced dynamic pricing
+- 📊 **Advanced Economics**: Supply & demand system with resource depletion mechanics
+- 💰 **Transaction Tax**: Built-in money sink (5% default) to combat inflation
+- 🎒 **Fill Inventory**: Buy emeralds to fill entire inventory in one click
 - 🎨 **Fully Customizable GUI**: Configure menus via `menu.yml` (DeluxeMenus-style)
 - 🔒 **Secure Transactions**: Atomic operations with rollback support
 - 📝 **Transaction Logging**: Complete audit trail of all conversions
-- 🎯 **PlaceholderAPI Integration**: Rich placeholder support
+- 🎯 **PlaceholderAPI Integration**: 22 rich placeholders for complete customization
 - 🌐 **GeyserMC Compatible**: Works with Bedrock Edition players
 - ⚡ **High Performance**: Async operations, thread-safe architecture
+- 🌍 **Multi-Language**: English & Indonesian built-in
+
+## 🆕 What's New in v3.0
+
+### 🔥 Major Features
+
+#### 1. **Fill Inventory** (NEW)
+Buy emeralds to fill your entire inventory in one click!
+- Automatically calculates available space
+- Shows total cost with tax breakdown
+- Transparent pricing display
+- Smart inventory management
+
+```yaml
+# In-game display:
+Fill Inventory
+├─ Available Space: 512 emeralds
+├─ Cost (Base): $5,222.40
+├─ Tax (5%): $261.12
+├─ Total Cost: $5,483.52
+└─ Balance: $6,000.00
+```
+
+#### 2. **Advanced Dynamic Pricing System** (COMPLETE REWRITE)
+Real economics simulation with:
+- **Supply & Demand**: Separate tracking for buy/sell pressure
+- **EWMA Smoothing**: Reduces price volatility (α=0.3)
+- **Resource Depletion**: Simulates mining difficulty
+- **Anti-Manipulation**: Max 100 emeralds impact per transaction
+- **Price Recovery**: Gradual return to base prices
+
+**Economic Formula**:
+```
+Buy Price = Base + (Demand × Sensitivity × Depletion) - Depletion Penalty
+Sell Price = Base - (Supply × Sensitivity) + Premium
+Depletion = 1.0 - (Total Converted × Rate) + Recovery
+```
+
+#### 3. **Transaction Tax System** (NEW)
+Automatic money sink to combat inflation:
+- **Default**: 5% tax on all transactions
+- **Configurable**: 0-100% via config
+- **Transparent**: Players see tax amount in GUI
+- **Selling**: Tax deducted from earnings
+- **Buying**: Tax added to cost
+
+**Example**:
+```
+Selling: 64 emeralds × $10 = $640
+Tax (5%): $32 removed from economy
+Player receives: $608
+
+Buying: 64 emeralds × $12 = $768
+Tax (5%): $38.40
+Player pays: $806.40
+```
+
+#### 4. **Multi-Language Support** (NEW)
+Built-in translations with hot-reload:
+- 🇬🇧 English (`messages_eng.yml`)
+- 🇮🇩 Indonesian (`messages_id.yml`)
+- Switch languages via `messages_locale` in config
+- Easy to add more languages
+- All messages customizable
+
+#### 5. **Custom Amount Feature** (NEW)
+Input any amount via chat:
+- Click "Custom Amount" button in GUI
+- Type amount in chat (e.g., "50" or "cancel")
+- 60-second timeout with cleanup
+- Full input validation
+- Works for both buying and selling
+
+### 📊 22 PlaceholderAPI Placeholders (10 NEW)
+
+New placeholders for advanced features:
+- `%emeraldeconomy_inventory_buy_value_with_tax%` - Total cost with tax
+- `%emeraldeconomy_inventory_buy_tax%` - Tax amount for filling inventory
+- `%emeraldeconomy_can_afford_inventory_fill%` - Can afford check (true/false)
+- `%emeraldeconomy_inventory_buy_space%` - Free inventory space
+- `%emeraldeconomy_depletion_factor%` - Resource depletion percentage
+- `%emeraldeconomy_total_emeralds_converted%` - Global emerald conversions
+- `%emeraldeconomy_transaction_tax_rate%` - Current tax rate
+- `%emeraldeconomy_base_buy_price%` - Base buy price
+- `%emeraldeconomy_base_sell_price%` - Base sell price
+
+### 🗑️ Removed Features
+- **HolographicDisplays**: Removed dependency to simplify plugin
+- Cleaner codebase, faster startup
+- Smaller plugin size (~42KB vs ~45KB)
+
+### 🔧 Breaking Changes
+- `PriceManager` completely rewritten - API changes
+- Old `loadPricesFromConfig()` → `loadConfiguration()`
+- Old `setBasePrice()` removed - use config + reload
+- Price methods no longer take amount parameter
+
+### 📈 Performance Improvements
+- Thread-safe price calculations with ReadWriteLock
+- Async transaction processing
+- Optimized inventory space calculations
+- Reduced memory footprint
 
 ## 🚀 Features
 
@@ -25,26 +130,39 @@ EmeraldEconomy is a feature-rich Minecraft plugin that allows players to convert
 - **Buy/Sell Emeralds**: Convert between emeralds and money seamlessly
 - **Bulk Conversion**: Special pricing for bulk transactions
 - **Convert All**: One-click conversion of all emeralds in inventory
+- **Fill Inventory** ⭐ *NEW v3.0*: Buy emeralds to completely fill inventory space
+- **Custom Amount**: Type exact amount for precise conversions
 - **Cooldown System**: Prevent spam with configurable cooldowns
 - **Rate Limiting**: Anti-abuse protection
 
-### Dynamic Pricing
-- Market-based price adjustments
-- Volume-triggered price changes
-- Configurable min/max prices
-- Smooth price transitions
+### Advanced Dynamic Pricing System ⭐ *NEW v3.0*
+- **Supply & Demand Economics**: Prices adjust based on market activity
+  - High demand → Buy prices increase
+  - High supply → Sell prices decrease
+- **EWMA Smoothing**: Exponential weighted moving average reduces volatility
+- **Resource Depletion**: Simulates "mining difficulty" - more conversions = lower buying pressure
+- **Gradual Recovery**: Depletion recovers over time (configurable)
+- **Transaction Tax**: 5% default (configurable 0-100%) - removes money from economy
+- **Anti-Manipulation**: 
+  - Max impact per transaction (prevents price manipulation)
+  - Rate limiting and cooldowns
+- **Price Bounds**: Configurable min/max prices prevent extreme fluctuations
 
 ### GUI System
 - **No Hard-Coded GUIs**: All menus defined in `menu.yml`
 - **Action System**: DeluxeMenus-style action execution
 - **Real-time Updates**: Dynamic placeholder updates
 - **Custom Items**: Support for custom model data and player heads
+- **Interactive Buttons**: 
+  - Sell 1, 64, or all emeralds
+  - Buy 1, 64, or fill inventory
+  - Custom amount input via chat
+  - Price information panel
 
 ### Integrations
 - **Vault API**: Universal economy support
-- **PlaceholderAPI**: Rich placeholder system
+- **PlaceholderAPI**: 22 rich placeholders (10 new in v3.0)
 - **GeyserMC**: Bedrock Edition compatibility
-- **HolographicDisplays**: Price display holograms (optional)
 
 ### Security & Performance
 - Atomic transactions with rollback
@@ -52,6 +170,7 @@ EmeraldEconomy is a feature-rich Minecraft plugin that allows players to convert
 - Strict emerald validation (anti-exploit)
 - Async task processing
 - Thread-safe dynamic pricing
+- Transaction tax as money sink
 
 ## 📦 Installation
 
@@ -62,9 +181,8 @@ EmeraldEconomy is a feature-rich Minecraft plugin that allows players to convert
   - [Vault](https://www.spigotmc.org/resources/vault.34315/)
   - Economy plugin (EssentialsX, CMI, etc.)
 - **Optional Plugins**:
-  - [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/)
-  - [GeyserMC](https://geysermc.org/)
-  - [HolographicDisplays](https://dev.bukkit.org/projects/holographic-displays)
+  - [PlaceholderAPI](https://www.spigotmc.org/resources/placeholderapi.6245/) (Recommended for full features)
+  - [GeyserMC](https://geysermc.org/) (For Bedrock Edition support)
 
 ### Installation Steps
 
@@ -98,6 +216,9 @@ EmeraldEconomy is a feature-rich Minecraft plugin that allows players to convert
 ### config.yml
 
 ```yaml
+# Language/Messages Configuration (NEW v3.0)
+messages_locale: "messages_id"   # Options: messages_eng | messages_id
+
 currency:
   name: "Dollar"
   symbol: "$"
@@ -108,14 +229,36 @@ prices:
   bulk_multiplier: 0.98
   bulk_threshold: 16
 
+# Dynamic Pricing System (v3.0 - COMPLETELY REWRITTEN)
 dynamic_pricing:
   enabled: true
+  
+  # Time window in seconds to track transactions
   window_seconds: 300
-  volume_threshold: 100
-  adjustment_percent: 0.5
+  
+  # How often to update prices (seconds)
+  update_interval: 5
+  
+  # Price bounds
   min_price: 1.0
   max_price: 1000.0
-  update_interval: 5
+  
+  # Supply & Demand Sensitivity (NEW v3.0)
+  # Higher values = more price volatility
+  demand_sensitivity: 0.02   # How much demand affects buy price
+  supply_sensitivity: 0.02   # How much supply affects sell price
+  
+  # Resource Depletion System (NEW v3.0)
+  # Simulates "mining difficulty" - more conversions = lower buying pressure
+  depletion_rate: 0.0001           # Depletion per emerald converted
+  depletion_recovery_seconds: 3600  # Time for full recovery (1 hour)
+  
+  # Anti-Manipulation (NEW v3.0)
+  max_impact_per_transaction: 100  # Max emeralds that affect price per transaction
+  
+  # Transaction Tax (Money Sink) (NEW v3.0)
+  # Percentage of transaction value removed from economy
+  transaction_tax_rate: 0.05  # 5% tax (0.05 = 5%, 0.10 = 10%)
 
 transaction:
   cooldown: 3       # Seconds between transactions
@@ -166,9 +309,12 @@ Supported action types:
 - `[async]<action>` - Execute custom async action
 
 Custom async actions:
-- `convert_sell:<amount>` - Sell emeralds
-- `convert_sell_all` - Sell all emeralds
-- `convert_buy:<amount>` - Buy emeralds
+- `convert_sell:<amount>` - Sell specific amount of emeralds
+- `convert_sell_all` - Sell all emeralds in inventory
+- `convert_buy:<amount>` - Buy specific amount of emeralds
+- `convert_buy_inventory` or `convert_buy_all` ⭐ *NEW v3.0* - Fill inventory with emeralds
+- `custom_amount_sell` ⭐ *NEW v3.0* - Input custom amount via chat (sell)
+- `custom_amount_buy` ⭐ *NEW v3.0* - Input custom amount via chat (buy)
 
 ## 🎮 Usage
 
@@ -191,20 +337,79 @@ emeraldeconomy.admin        # Admin commands (default: op)
 emeraldeconomy.bypass.cooldown  # Bypass cooldowns (default: op)
 ```
 
-### PlaceholderAPI Placeholders
+### PlaceholderAPI Placeholders (22 Total)
 
+#### Price Information (4)
 | Placeholder | Description |
 |-------------|-------------|
-| `%emeraldeconomy_price_buy%` | Current buy price (server buys) |
-| `%emeraldeconomy_price_sell%` | Current sell price (server sells) |
-| `%emeraldeconomy_total_converted%` | Player's total converted emeralds |
+| `%emeraldeconomy_price_buy%` | Current buy price (server buys from player) |
+| `%emeraldeconomy_price_sell%` | Current sell price (server sells to player) |
+| `%emeraldeconomy_base_buy_price%` ⭐ *NEW* | Base buy price (before adjustments) |
+| `%emeraldeconomy_base_sell_price%` ⭐ *NEW* | Base sell price (before adjustments) |
+
+#### Stack & Bulk (2)
+| Placeholder | Description |
+|-------------|-------------|
+| `%emeraldeconomy_stack_sell_value%` | Value of 64 emeralds when player sells |
+| `%emeraldeconomy_stack_buy_value%` | Cost of 64 emeralds when player buys |
+
+#### Player Stats (3)
+| Placeholder | Description |
+|-------------|-------------|
+| `%emeraldeconomy_total_converted%` | Player's total emeralds converted |
 | `%emeraldeconomy_player_emeralds%` | Emeralds in player's inventory |
 | `%emeraldeconomy_all_sell_value%` | Total value of all player's emeralds |
-| `%emeraldeconomy_stack_sell_value%` | Value of 64 emeralds (sell) |
-| `%emeraldeconomy_stack_buy_value%` | Cost of 64 emeralds (buy) |
-| `%emeraldeconomy_recent_volume%` | Recent market volume |
-| `%emeraldeconomy_currency_symbol%` | Currency symbol |
-| `%emeraldeconomy_currency_name%` | Currency name |
+
+#### Inventory Fill Feature (5) ⭐ *NEW v3.0*
+| Placeholder | Description |
+|-------------|-------------|
+| `%emeraldeconomy_inventory_buy_space%` | Free space for emeralds in inventory |
+| `%emeraldeconomy_inventory_buy_value%` | Base cost to fill inventory (no tax) |
+| `%emeraldeconomy_inventory_buy_value_with_tax%` | **Total cost** to fill inventory (with tax) |
+| `%emeraldeconomy_inventory_buy_tax%` | Tax amount for filling inventory |
+| `%emeraldeconomy_can_afford_inventory_fill%` | Can afford? Returns `true` or `false` |
+
+#### Dynamic Pricing Stats (4) ⭐ *NEW v3.0*
+| Placeholder | Description |
+|-------------|-------------|
+| `%emeraldeconomy_depletion_factor%` | Resource depletion percentage |
+| `%emeraldeconomy_total_emeralds_converted%` | Global emerald conversions |
+| `%emeraldeconomy_transaction_tax_rate%` | Transaction tax rate percentage |
+| `%emeraldeconomy_recent_volume%` | Recent transaction volume |
+
+#### Currency (2)
+| Placeholder | Description |
+|-------------|-------------|
+| `%emeraldeconomy_currency_symbol%` | Currency symbol ($) |
+| `%emeraldeconomy_currency_name%` | Currency name (Dollar) |
+
+**Total: 22 placeholders** (10 new in v3.0)
+
+## 🔧 Building from Source
+
+### Prerequisites
+- JDK 21+
+- Gradle 9.0.0+
+
+### Build Steps
+
+```bash
+# Clone repository
+git clone https://github.com/craftepxly/EmeraldEconomy.git
+cd EmeraldEconomy
+
+# Build with Gradle
+./gradlew clean shadowJar
+
+# Output: build/libs/EmeraldEconomy-1.0.0.jar
+```
+
+### Development Setup (IntelliJ IDEA)
+
+1. Install [Minecraft Development plugin](https://plugins.jetbrains.com/plugin/8327-minecraft-development)
+2. Import project as Gradle project
+3. Wait for Gradle sync to complete
+4. Run configurations will be auto-generated
 
 ## 📊 Transaction Logging
 
@@ -327,10 +532,26 @@ int totalConverted = plugin.getPlayerStatsStorage().getTotalConverted(player.get
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## 🤝 Contributing
+
+Contributions are welcome! Please:
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📬 Support
+
+- **Issues**: [GitHub Issues](https://github.com/craftepxly/EmeraldEconomy/issues)
+- **Discord**: [Join our Discord](#)
+- **Documentation**: [Wiki](https://github.com/craftepxly/EmeraldEconomy/wiki)
 
 ## 🎉 Credits
 
 **Author**: craftepxly  
+**Contributors**: [View Contributors](https://github.com/craftepxly/EmeraldEconomy/graphs/contributors)
 
 Special thanks to:
 - Paper team for the excellent server software
