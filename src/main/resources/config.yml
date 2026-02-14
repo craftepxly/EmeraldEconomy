@@ -1,0 +1,288 @@
+# ========================================
+# EmeraldEconomy Configuration
+# Main configuration file for the plugin
+# This file controls all plugin behavior, pricing, storage, and features
+# ========================================
+
+# Language/Messages Configuration
+# This key tells the plugin which message file to load from messages/ folder
+# The value "messages_id" means it will load messages_id.yml (Indonesian language)
+# If you want English, change this to "messages_eng"
+messages_locale: "messages_id"   # Options: messages_eng | messages_id
+
+# Currency settings
+# These settings define what currency symbol and name appear in messages
+currency:
+  # The full name of the currency (used by PlaceholderAPI %emeraldeconomy_currency_name%)
+  # Example values: "Dollar", "Emerald", "Rupiah", "Euro"
+  name: "Dollar"
+  
+  # The symbol that appears before money amounts in messages
+  # This is automatically injected into all messages via MessageManager
+  # Example values: "$", "€", "Rp", "¥"
+  symbol: "$"
+  
+# Pricing configuration
+# Controls base prices before dynamic adjustments
+prices:
+  # Price when server BUYS emerald from player (player receives money)
+  # This is the base value - actual price may vary with dynamic pricing
+  # Example: If buy = 9.5, player gets $9.50 per emerald when selling
+  buy: 9.5
+  
+  # Price when server SELLS emerald to player (player pays money)
+  # This is the base cost - actual price may vary with dynamic pricing
+  # Example: If sell = 10.0, player pays $10.00 per emerald when buying
+  sell: 10.0
+
+# Dynamic pricing system (Advanced Supply-Demand Economics)
+# Controls the automatic price adjustment based on market activity
+dynamic_pricing:
+  # Master switch for dynamic pricing
+  # true = prices change based on supply/demand
+  # false = prices stay at base values (prices.buy and prices.sell)
+  enabled: true
+  
+  # Time window in seconds to track transactions
+  # Only transactions within this window affect price calculations
+  # Example: 300 = last 5 minutes of trades affect current price
+  # Older transactions are automatically removed from calculation
+  window_seconds: 300
+  
+  # How often to update prices (seconds)
+  # The PriceManager runs updatePrices() every X seconds
+  # Example: 5 = prices recalculate every 5 seconds
+  # Lower values = more responsive pricing, but higher CPU usage
+  update_interval: 5
+  
+  # Price bounds
+  # Minimum price per emerald (prevents price from going too low)
+  # Example: 1.0 = emerald can never be worth less than $1.00
+  min_price: 1.0
+  
+  # Maximum price per emerald (prevents price from going too high)
+  # Example: 1000.0 = emerald can never be worth more than $1000.00
+  max_price: 1000.0
+  
+  # Supply & Demand Sensitivity
+  # Higher values = more price volatility (prices change faster)
+  # Lower values = more price stability (prices change slower)
+  
+  # How much demand affects buy price
+  # Formula: buy_price += (buy_volume * demand_sensitivity * depletion_factor)
+  # Example: 0.02 = each emerald bought increases price by 2% of base
+  demand_sensitivity: 0.02   # How much demand affects buy price
+  
+  # How much supply affects sell price
+  # Formula: sell_price -= (sell_volume * supply_sensitivity)
+  # Example: 0.02 = each emerald sold decreases price by 2% of base
+  supply_sensitivity: 0.02   # How much supply affects sell price
+  
+  # Resource Depletion System
+  # Simulates "mining difficulty" - more conversions = lower buying pressure
+  
+  # Depletion per emerald converted
+  # Formula: depletion_factor = 1.0 - (total_converted * depletion_rate)
+  # Example: 0.0001 = each 10,000 emeralds converted reduces factor by 1%
+  # Lower factor = server pays less for emeralds (simulates resource scarcity)
+  depletion_rate: 0.0001
+  
+  # Time for full recovery (seconds)
+  # How long it takes for depletion to recover back to normal
+  # Example: 3600 = after 1 hour, depletion factor recovers by 50%
+  # This prevents permanent depletion in long-running servers
+  depletion_recovery_seconds: 3600  # Time for full recovery (1 hour)
+  
+  # Anti-Manipulation
+  # Max emeralds that affect price per transaction
+  # Prevents single massive trade from crashing/inflating prices
+  # Example: 100 = even if player trades 1000 emeralds, only 100 count for price impact
+  # This stops rich players from manipulating the economy
+  max_impact_per_transaction: 100
+  
+  # Transaction Tax (Money Sink)
+  # Percentage of transaction value removed from economy
+  # Tax is REMOVED from the economy (destroyed, not given to anyone)
+  # This helps balance inflation by removing money from circulation
+  
+  # Tax rate as decimal (0.05 = 5%, 0.10 = 10%)
+  # For SELL: player receives (base_value - tax)
+  # For BUY: player pays (base_cost + tax)
+  # Example: 0.05 = 5% tax on all transactions
+  transaction_tax_rate: 0.05  # 5% tax (0.05 = 5%, 0.10 = 10%)
+
+# Transaction settings
+# Controls transaction logging and player limits
+transaction:
+  # Log file name (will be created in plugin folder)
+  # This is ONLY used when storage type is YAML
+  # For SQLite/MySQL, transactions are logged to database instead
+  # File format: plain text with one transaction per line
+  log_file: "transactions.log"
+  
+  # Enable console logging for transactions
+  # true = every transaction prints to server console
+  # false = transactions are only written to file/database
+  # Useful for debugging but can spam console on busy servers
+  enable_console_log: true
+  
+  # Cooldown between transactions (seconds, 0 to disable)
+  # Prevents players from spamming transactions
+  # Example: 3 = player must wait 3 seconds between each trade
+  # Players with permission emeraldeconomy.bypass.cooldown ignore this
+  cooldown: 3
+  
+  # Maximum transactions per player per minute (anti-spam)
+  rate_limit:
+    # Master switch for rate limiting
+    # true = enforce max_per_minute limit
+    # false = no rate limiting (allow unlimited transactions)
+    enabled: true
+    
+    # Maximum transactions allowed per player per 60 seconds
+    # Example: 20 = player can do max 20 trades per minute
+    # After limit is reached, player gets "rate_limit" error message
+    # Counter resets after 60 seconds
+    max_per_minute: 20
+
+# GUI settings
+# Controls menu behavior (menu.yml)
+gui:
+  # Menu configuration file
+  # NOT CURRENTLY USED - menu.yml location is hardcoded
+  # Legacy setting kept for compatibility
+  menu_file: "menu.yml"
+  
+  # Update GUI every X ticks (for dynamic placeholders)
+  # 20 ticks = 1 second in Minecraft
+  # This controls how often PlaceholderAPI values refresh in open menus
+  # Example: 20 = prices update every 1 second in GUI
+  update_interval: 20
+
+# PlaceholderAPI integration
+placeholder:
+  # Auto-register placeholders on plugin enable
+  # true = EmeraldEconomyPlaceholderExpansion.register() is called
+  # false = placeholders not available
+  # Requires PlaceholderAPI plugin to be installed
+  register: true
+  
+# ================================================
+# Storage Configuration
+# Controls where player data and transactions are saved
+# ================================================
+storage:
+  # Storage backend type
+  # Options: YAML, SQLITE, MYSQL
+  # 
+  # YAML characteristics:
+  #   - Stores data in player_stats.yml and transactions.log
+  #   - Simple file-based storage, no database needed
+  #   - Good for small servers (<50 players)
+  #   - Slower than SQL backends on large datasets
+  #   - Human-readable files (can edit with text editor)
+  # 
+  # SQLITE characteristics:
+  #   - Stores data in emeraldeconomy.db (single file)
+  #   - Embedded database, no external server needed
+  #   - Good for medium servers (50-200 players)
+  #   - Much faster than YAML
+  #   - Supports concurrent reads (WAL mode)
+  # 
+  # MYSQL characteristics:
+  #   - Stores data in remote MySQL/MariaDB server
+  #   - Requires external database server
+  #   - Best for large servers (200+ players)
+  #   - Supports BungeeCord networks (shared database)
+  #   - Connection pooling for high performance
+  type: YAML
+
+  # MySQL Configuration (only used when type: MYSQL)
+  # These settings are ignored if type is YAML or SQLITE
+  mysql:
+    # Database server hostname or IP address
+    # Examples: "localhost", "192.168.1.100", "db.example.com"
+    host: localhost
+    
+    # MySQL server port (default: 3306)
+    # Usually doesn't need to be changed
+    port: 3306
+    
+    # Database name to use
+    # This database must exist before plugin starts
+    # Plugin will create tables inside this database automatically
+    database: EmeraldEconomy
+    
+    # MySQL username for authentication
+    # This user must have permissions: SELECT, INSERT, UPDATE, CREATE, INDEX
+    username: root
+    
+    # MySQL password for authentication
+    # Keep this secret! Don't share your config file publicly
+    password: password
+    
+    # HikariCP connection pool size
+    # Number of persistent connections to keep open
+    # Higher = more concurrent queries, but more memory usage
+    # Recommended: 10 for small servers, 20 for large servers
+    pool-size: 10
+    
+    # JDBC connection properties
+    # Additional parameters passed to MySQL driver
+    # useSSL=false — disable SSL (faster, use only on trusted networks)
+    # autoReconnect=true — automatically reconnect if connection drops
+    # allowPublicKeyRetrieval=true — required for MySQL 8.0+ authentication
+    properties: "useSSL=false&autoReconnect=true&allowPublicKeyRetrieval=true"
+    
+    # Connection timeout in milliseconds
+    # How long to wait for connection before giving up
+    # 30000 = 30 seconds
+    timeout: 30000
+    
+    # Maximum connection lifetime in milliseconds
+    # Connections are closed and recreated after this time
+    # Prevents stale connections
+    # 1800000 = 30 minutes
+    max-lifetime: 1800000
+
+  # SQLite Configuration (only used when type: SQLITE)
+  sqlite:
+    # Database filename (stored in plugin folder)
+    # Full path: plugins/EmeraldEconomy/emeraldeconomy.db
+    filename: emeraldeconomy.db
+    
+    # Enable WAL (Write-Ahead Logging) mode
+    # true = allows concurrent reads while writing (recommended)
+    # false = traditional rollback journal (slower)
+    # WAL mode significantly improves performance under load
+    wal-mode: true
+
+  # Async Operations
+  # Controls thread pool for database operations
+  async:
+    # Enable async database operations
+    # true = database operations run on background threads
+    # false = database operations run on main thread (NOT RECOMMENDED)
+    enabled: true
+    
+    # Number of threads in async pool
+    # MySQL: fixed thread pool with this many threads
+    # SQLite: always uses 1 thread (SQLite is not thread-safe)
+    # Recommended: 4 for most servers
+    thread-pool-size: 4
+    
+# Security settings
+# Controls validation and anti-cheat measures
+security:
+  # Only accept genuine emeralds (no renamed items)
+  # true = ItemUtils.isValidEmerald() checks for custom display names
+  # false = accept any emerald item (vulnerable to exploits)
+  # ALWAYS KEEP THIS TRUE to prevent fake emerald exploits
+  strict_emerald_check: true
+  
+# Debug mode
+# Enables verbose logging for troubleshooting
+# true = log every transaction, price change, database operation
+# false = only log important events and errors
+# Enable this when reporting bugs
+debug: false

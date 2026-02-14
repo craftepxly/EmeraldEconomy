@@ -1,0 +1,113 @@
+# Plugin metadata file required by Bukkit/Spigot/Paper
+# This file tells the server how to load and register the plugin
+
+# Plugin name (must match JAR filename)
+name: EmeraldEconomy
+
+# Main class (full package path)
+# Server calls EmeraldEconomy.onEnable() when loading plugin
+# Must be exact match to actual class location
+main: craftepxly.me.emeraldeconomy.EmeraldEconomy
+
+# Plugin version (replaced by Gradle at build time)
+# ${version} is a placeholder that Gradle replaces with actual version from build.gradle
+# Example: 3.0.0, 3.1.0-SNAPSHOT, etc.
+version: ${version}
+
+# Minimum Minecraft API version required
+# "1.13" = works on Minecraft 1.13 and above
+# This enables modern features like Adventure API, namespaced keys, etc.
+api-version: "1.13"
+
+# Plugin author name (shown in /plugins command)
+author: CraftePxly
+
+# Short description (shown in /plugins command)
+description: Advanced emerald to money converter with dynamic pricing
+
+# Plugin website URL (shown in /plugins command)
+website: https://github.com/craftepxly
+
+# Hard dependencies (plugins that MUST be present before this loads)
+# Server will refuse to load EmeraldEconomy if these are missing
+depend:
+  # Vault = economy API wrapper (required for money operations)
+  # Without Vault, plugin cannot access economy plugin (EssentialsX, CMI, etc.)
+  - Vault
+
+# Soft dependencies (optional plugins that load BEFORE this if present)
+# Server loads these first if available, but won't fail if missing
+softdepend:
+  # PlaceholderAPI = provides dynamic placeholders in messages/menus
+  # If present, plugin registers 40+ custom placeholders
+  - PlaceholderAPI
+  # Geyser-Spigot = Bedrock Edition (mobile/console) support
+  # If detected, plugin logs that Bedrock players are supported
+  - Geyser-Spigot
+
+# Command definitions
+# Registers commands with the server so they can be executed
+commands:
+  # Main converter command
+  emeraldconverter:
+    # Command description (shown in /help)
+    description: Open the Emerald Converter GUI
+    # Alternative names that also trigger this command
+    # /ec, /emerald, /emeraldconverter all do the same thing
+    aliases: [ec, emerald]
+    # Usage hint (shown when command fails)
+    usage: /<command>
+    # Required permission node (see permissions section below)
+    permission: emeraldeconomy.use
+  
+  # Admin command
+  emeraldeconomyadmin:
+    # Description shown in /help
+    description: Admin commands for EmeraldEconomy
+    # Alternative names for admin command
+    aliases: [ecadmin, eca]
+    # Usage hint with subcommands
+    usage: /<command> <reload|stats|setprice>
+    # Required permission for admin commands
+    permission: emeraldeconomy.admin
+
+# Permission definitions
+# Defines all permission nodes and their relationships
+permissions:
+  # Wildcard permission (grants all child permissions)
+  emeraldeconomy.*:
+    # Description shown in permission plugins
+    description: Grants all EmeraldEconomy permissions
+    # Who gets this permission by default
+    # op = only server operators (admins)
+    default: op
+    # Child permissions granted by this wildcard
+    # When player has emeraldeconomy.*, they get all these:
+    children:
+      emeraldeconomy.use: true
+      emeraldeconomy.admin: true
+      emeraldeconomy.bypass.cooldown: true
+  
+  # Basic usage permission
+  emeraldeconomy.use:
+    # What this permission allows
+    description: Allow using the emerald converter
+    # Who gets this by default
+    # true = everyone (all players)
+    default: true
+  
+  # Admin permission
+  emeraldeconomy.admin:
+    # What this permission allows
+    description: Allow using admin commands
+    # Who gets this by default
+    # op = only server operators
+    default: op
+  
+  # Cooldown bypass permission
+  emeraldeconomy.bypass.cooldown:
+    # What this permission allows
+    description: Bypass transaction cooldown
+    # Who gets this by default
+    # op = only server operators
+    default: op

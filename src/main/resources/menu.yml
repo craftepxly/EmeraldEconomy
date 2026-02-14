@@ -1,0 +1,476 @@
+# ========================================
+# EmeraldEconomy Menu Configuration
+# Action System (DeluxeMenus-style)
+# This file defines all GUI menus using a custom action system
+# ========================================
+
+# Top-level section: all menus are defined under this key
+menus:
+  # Main converter menu (opened with /ec command)
+  emerald-converter:
+    # Menu title shown at top of inventory GUI
+    # Supports MiniMessage formatting: <color>, <gradient>, <bold>, etc.
+    title: "<dark_gray>Emerald Converter"
+    
+    # Inventory size (must be multiple of 9, max 54)
+    # 54 = 6 rows × 9 columns = full chest size
+    size: 54  # 6 rows
+    
+    # How often to update menu (in ticks, 20 ticks = 1 second)
+    # Every X ticks, PlaceholderAPI values are refreshed and menu is redrawn
+    # This updates dynamic values like prices, balances, stats
+    update_interval: 20  # Update every 20 ticks (1 second)
+
+    # Items section: defines all clickable/display items in the menu
+    items:
+      # Filler items (decorative glass panes)
+      filler:
+        # List of slots where this item appears (slot 0 = top-left)
+        # Slot numbering: 0-8 (row 1), 9-17 (row 2), 18-26 (row 3), etc.
+        # These slots form a border around the edges of the menu
+        slots: [0, 1, 2, 6, 7, 8, 9, 18, 27, 36, 17, 26, 35, 44, 45, 46, 47, 48, 50, 51, 52, 53]
+        
+        # Minecraft material type (must be valid Material enum value)
+        # GRAY_STAINED_GLASS_PANE = gray glass pane (decorative)
+        material: GRAY_STAINED_GLASS_PANE
+        
+        # Display name (empty space = no name shown)
+        # Single space prevents "Gray Stained Glass Pane" from showing
+        name: " "
+        
+        # Lore (description lines below name)
+        # Empty list = no lore shown
+        lore: []
+
+      # ====================================
+      # REFRESH BUTTON (Slot 4)
+      # Manually refreshes the menu to update prices/stats
+      # ====================================
+
+      refresh:
+        # Single slot where this item appears (slot 4 = top-center)
+        slot: 4
+        
+        # Material type: RECOVERY_COMPASS = compass with animated texture
+        material: RECOVERY_COMPASS
+        
+        # Display name with MiniMessage formatting
+        # <aqua> = cyan color, ↻ = circular arrow symbol (Unicode)
+        name: "<aqua>↻ Refresh Menu"
+        
+        # Lore lines (supports MiniMessage formatting)
+        lore:
+          # Small caps text using Unicode characters (ᴜᴛɪʟɪᴛʏ)
+          - "<dark_gray>ᴜᴛɪʟɪᴛʏ"
+          # Empty line for spacing
+          - ""
+          # Description of what this button does
+          - "<white>Refresh prices and stats"
+          - "<white>to see latest data."
+          - ""
+          # Additional info about auto-refresh
+          - "<gray>Auto-updates every 1 second"
+          - ""
+          # Click instruction
+          - "<aqua>• <aqua>Click to refresh now"
+        
+        # Enchantments to apply (visual effect)
+        # Format: "ENCHANTMENT_NAME:LEVEL"
+        # DURABILITY:1 = Unbreaking I (adds glowing effect)
+        enchantments:
+          - "DURABILITY:1"
+        
+        # Item flags to hide enchantment info
+        # HIDE_ENCHANTS = don't show "Unbreaking I" in lore
+        # This gives glowing effect without showing enchantment text
+        flags:
+          - "HIDE_ENCHANTS"
+        
+        # Actions to execute when clicked
+        # Actions are processed by ActionExecutor.java
+        actions:
+          # [refresh] = re-render menu with updated placeholders
+          - "[refresh]"
+          # [sound] = play sound effect (BLOCK_NOTE_BLOCK_CHIME at volume 1.0, pitch 1.5)
+          - "[sound]BLOCK_NOTE_BLOCK_CHIME:1.0:1.5"
+
+      # ====================================
+      # SELL ACTIONS
+      # Buttons for selling emeralds (player → server)
+      # ====================================
+
+      # Convert 1 Emerald
+      sell-1:
+        # Slot 19 = second row, second column
+        slot: 19
+        
+        # Material: EMERALD = emerald gem item
+        material: EMERALD
+        
+        # Stack size shown in GUI (1 = single item)
+        amount: 1
+        
+        # Display name (red color = selling/removing)
+        name: "<red>Sell 1 Emerald"
+        
+        # Lore with price calculations using PlaceholderAPI
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Sell emerald from inventory"
+          - "<white>into money."
+          - ""
+          # Price info (placeholders replaced at runtime)
+          # %emeraldeconomy_price_buy% = what server pays per emerald
+          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_buy%"
+          # Tax calculation: 5% of sell price
+          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_1_tax%"
+          # Net amount player receives (price - tax)
+          - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_1_value%"
+          - ""
+          # Player status info
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - "<white>Your emerald: <green>%emeraldeconomy_player_emeralds%"
+          - ""
+          - "<red>• <red>Click to sell"
+        
+        # Actions executed when clicked (runs asynchronously)
+        actions:
+          # [requirement] = check if player has at least 1 emerald
+          # If requirement fails, action chain stops and nothing happens
+          - "[requirement]has_emerald:1"
+          # [async] = execute on async thread to avoid lag
+          # convert_sell:1 = calls handleConvertSell(player, 1) in ActionExecutor
+          - "[async]convert_sell:1"
+          # Play success sound effect
+          - "[sound]ENTITY_EXPERIENCE_ORB_PICKUP:1.0:1.0"
+          # Refresh menu to update balances
+          - "[refresh]"
+        
+        # Requirements (alternative to [requirement] action)
+        # NOT CURRENTLY ENFORCED - legacy system
+        requirements:
+          - "permission:emeraldeconomy.use"
+          - "emerald:1"
+          - "placeholder:%emeraldeconomy_has_1_emerald%==true"
+
+      # Convert Stack (64)
+      sell-64:
+        slot: 20
+        material: EMERALD
+        # Amount shown in GUI = 64 (full stack)
+        amount: 64
+        name: "<red>Sell 1 Stack Emerald"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Sell 64 emerald at once"
+          - "<white>from your inventory."
+          - ""
+          # Sell price per emerald
+          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_buy%"
+          # Gross value before tax (64 × price)
+          - " <red>• <white>Gross value: <green>$%emeraldeconomy_stack_sell_value%"
+          # Tax on 64 emeralds
+          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_64_tax%"
+          # Net amount player receives
+          - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_64_value%"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - "<white>Your emerald: <green>%emeraldeconomy_player_emeralds%"
+          - ""
+          - "<red>• <red>Click to sell"
+        # Enchanted to add glowing effect
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        actions:
+          # Check if player has 64 emeralds
+          - "[requirement]has_emerald:64"
+          # Sell 64 emeralds
+          - "[async]convert_sell:64"
+          # Play sound at higher pitch (1.2 instead of 1.0)
+          - "[sound]ENTITY_EXPERIENCE_ORB_PICKUP:1.0:1.2"
+          - "[refresh]"
+        requirements:
+          - "permission:emeraldeconomy.use"
+          - "emerald:64"
+          - "placeholder:%emeraldeconomy_has_64_emeralds%==true"
+
+      # Convert All
+      sell-all:
+        slot: 21
+        # CHEST = chest icon (represents "all inventory")
+        material: CHEST
+        name: "<red>Sell All Emerald"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Clear all emerald"
+          - "<white>in your inventory."
+          - ""
+          # Total emeralds in player's inventory
+          - " <red>• <white>Total Amount: <green>%emeraldeconomy_sell_all_count% emeralds"
+          # Value before tax
+          - " <red>• <white>Gross value: <green>$%emeraldeconomy_all_sell_value%"
+          # Tax amount
+          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_all_tax%"
+          # Final payout
+          - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_all_value%"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - "<white>Your emerald: <green>%emeraldeconomy_player_emeralds%"
+          - ""
+          - "<red>• <red>Click to sell"
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        actions:
+          # Check if player has at least 1 emerald
+          - "[requirement]has_emerald:1"
+          # convert_sell_all = special action that counts all emeralds
+          - "[async]convert_sell_all"
+          # Play level-up sound (important action)
+          - "[sound]ENTITY_PLAYER_LEVELUP:1.0:1.0"
+          - "[refresh]"
+        requirements:
+          - "permission:emeraldeconomy.use"
+          - "emerald:1"
+          - "placeholder:%emeraldeconomy_has_any_emeralds%==true"
+
+      # ====================================
+      # INFO PANEL
+      # Display-only items (no click actions)
+      # ====================================
+
+      player-stats:
+        slot: 3
+        # PLAYER_HEAD = player's head (shows player's own skin)
+        material: PLAYER_HEAD
+        name: "<yellow>⚡ Your statistics"
+        lore:
+          - "<dark_gray>ᴍᴀʀᴋᴇᴛ ɪɴғᴏ"
+          - ""
+          # Dynamic pricing info
+          - "<yellow>Dynamic Pricing Statistics:"
+          - "<yellow>•  <white>Tax Rate: <green>%emeraldeconomy_transaction_tax_rate%"
+          - "<yellow>•  <white>Depletion: <green>%emeraldeconomy_depletion_factor%"
+          - "<yellow>•  <white>Global Total Converted: <green>%emeraldeconomy_total_emeralds_converted%"
+          - ""
+          # Player's personal stats
+          - "<yellow>Statistics:"
+          - "<yellow>•  <white>Total Converted: <green>%emeraldeconomy_total_converted%"
+          - "<yellow>•  <white>Your money: <green>%vault_eco_balance_formatted%"
+          - ""
+          - "<dark_gray><i>ᴘʀɪᴄᴇ ᴄʜᴀɴɢᴇs ᴅʏɴᴀᴍɪᴄᴀʟʟʏ"
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        # Empty actions array = no click behavior (display only)
+        actions: []
+
+      info-panel:
+        slot: 5
+        material: BOOK
+        name: "<yellow>⚡ Price Information"
+        lore:
+          - "<dark_gray>ᴍᴀʀᴋᴇᴛ ɪɴғᴏ"
+          - ""
+          # Current market prices
+          - "<white>Buy Price: <green>$%emeraldeconomy_price_buy% per emerald"
+          - "<white>Sell Price: <green>$%emeraldeconomy_price_sell% per emerald"
+          - ""
+          - "<dark_gray><i>ᴘʀɪᴄᴇ ᴄʜᴀɴɢᴇs ᴅʏɴᴀᴍɪᴄᴀʟʟʏ"
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        actions: []
+
+      # ====================================
+      # BUY ACTIONS
+      # Buttons for buying emeralds (server → player)
+      # ====================================
+
+      # Buy 1 Emerald
+      buy-1:
+        slot: 23
+        # EMERALD_BLOCK = block made of emeralds (represents buying)
+        material: EMERALD_BLOCK
+        amount: 1
+        name: "<green>Buy 1 Emerald"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Buy 1 piece of emerald"
+          - "<white>using money."
+          - ""
+          # Price player pays per emerald
+          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_sell%"
+          # Tax added to cost (player pays MORE due to tax)
+          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_buy_1_tax%"
+          # Total cost including tax
+          - " <green>• <white>Total Price: <green>$%emeraldeconomy_buy_1_cost%"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          # Affordability check (✔ or ✘)
+          - "<white>Can afford: <white>%emeraldeconomy_can_afford_1_emerald%"
+          - ""
+          - "<green>• <green>Click to buy"
+        actions:
+          # Check if player has enough money
+          # This checks player's balance against placeholder value
+          - "[requirement]has_money:%emeraldeconomy_price_sell%"
+          # convert_buy:1 = calls handleConvertBuy(player, 1) in ActionExecutor
+          - "[async]convert_buy:1"
+          # Play pling sound (note block)
+          - "[sound]BLOCK_NOTE_BLOCK_PLING:1.0:1.5"
+          - "[refresh]"
+        requirements:
+          - "permission:emeraldeconomy.use"
+
+      # Buy Stack (64)
+      buy-64:
+        slot: 24
+        material: EMERALD_BLOCK
+        amount: 64
+        name: "<green>Buy 1 Stack Emerald"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Buy 64 pieces of emerald"
+          - "<white>using money."
+          - ""
+          # Price per emerald
+          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_sell%"
+          # Base cost (64 × price)
+          - " <green>• <white>Base Cost (64×): <green>$%emeraldeconomy_stack_buy_value%"
+          # Tax on 64 emeralds
+          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_buy_64_tax%"
+          # Total cost (base + tax)
+          - " <green>• <white>Total Price: <green>$%emeraldeconomy_buy_64_cost%"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - "<white>Can afford: <green>%emeraldeconomy_can_afford_64_emeralds%"
+          - ""
+          - "<green>• <green>Click to buy"
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        actions:
+          - "[requirement]has_money:%emeraldeconomy_stack_buy_value%"
+          # Buy 64 emeralds
+          - "[async]convert_buy:64"
+          # Play sound at higher pitch
+          - "[sound]BLOCK_NOTE_BLOCK_PLING:1.0:2.0"
+          - "[refresh]"
+        requirements:
+          - "permission:emeraldeconomy.use"
+
+      # Buy All (fill inventory)
+      buy-all:
+        slot: 25
+        material: CHEST
+        name: "<green>Buy All Inventory"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Buy emerald until inventory full"
+          - "<white>using money."
+          - ""
+          # How many emeralds can fit in empty slots
+          - " <green>• <white>Available space: <green>%emeraldeconomy_inventory_buy_space%"
+          # Cost to fill all empty space
+          - " <green>• <white>Base Cost: <green>$%emeraldeconomy_inventory_buy_value%"
+          # Tax on that amount
+          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_inventory_buy_tax%"
+          # Total cost
+          # BUG IN LORE: Shows %emeraldeconomy_stack_buy_value% instead of _inventory_buy_value_with_tax%
+          - " <green>• <white>Total Price: <green>$%emeraldeconomy_stack_buy_value%"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - "<white>Can afford: <green>%emeraldeconomy_can_afford_64_emeralds%"
+          - ""
+          - "<green>• <green>Click to buy"
+        enchantments:
+          - "DURABILITY:1"
+        flags:
+          - "HIDE_ENCHANTS"
+        actions:
+          - "[requirement]has_money:%emeraldeconomy_stack_buy_value%"
+          # convert_buy_inventory = fills inventory to capacity
+          - "[async]convert_buy_inventory"
+          - "[sound]BLOCK_NOTE_BLOCK_PLING:1.0:2.0"
+          - "[refresh]"
+        requirements:
+          - "permission:emeraldeconomy.use"
+
+      # ====================================
+      # SPECIAL ACTIONS
+      # Advanced features (custom amounts, etc.)
+      # ====================================
+
+      # Custom amount sell
+      custom-sell:
+        slot: 29
+        # CRIMSON_SIGN = red sign (represents input prompt)
+        material: CRIMSON_SIGN
+        name: "<red>Enter amount"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Sell emerald with amount"
+          - "<white>that you specify yourself:"
+          # Usage instructions
+          - "<white>Example: <green>32"
+          - "<white>Cancel: <red>Cancel <white>or <red>Batal"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - ""
+          - "<red>• <red>Click to enter amount"
+        actions:
+          # custom_amount_sell = closes menu, starts chat listener
+          # ChatListener waits for player to type number in chat
+          - "[async]custom_amount_sell"
+          # Play bell sound
+          - "[sound]BLOCK_NOTE_BLOCK_BELL:1.0:1.5"
+
+      custom-buy:
+        slot: 33
+        # BIRCH_SIGN = light-colored sign (represents input prompt)
+        material: BIRCH_SIGN
+        name: "<green>Enter amount"
+        lore:
+          - "<dark_gray>ᴇxᴄʜᴀɴɢᴇ sʏsᴛᴇᴍ"
+          - ""
+          - "<white>Want to buy emerald? Enter your amount:"
+          - "<white>Example: <green>32"
+          - "<white>Want to cancel? type <red>Cancel <white>or <red>Batal"
+          - ""
+          - "<white>Your money: <green>$%vault_eco_balance_formatted%"
+          - ""
+          - "<green>• <green>Click to enter amount"
+        actions:
+          # custom_amount_buy = closes menu, starts chat listener
+          - "[async]custom_amount_buy"
+          - "[sound]BLOCK_NOTE_BLOCK_BELL:1.0:1.5"
+
+      # Close button
+      close:
+        slot: 49
+        # BARRIER = red X (universally recognized "close" symbol)
+        material: BARRIER
+        name: "<red>Close Menu"
+        lore:
+          - ""
+          - "<gray>Click to close menu"
+          - ""
+        actions:
+          # [close] = closes player's inventory GUI
+          - "[close]"
+          # Play chest close sound
+          - "[sound]BLOCK_CHEST_CLOSE:1.0:1.0"

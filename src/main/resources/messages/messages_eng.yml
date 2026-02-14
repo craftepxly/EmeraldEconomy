@@ -1,0 +1,199 @@
+# ========================================
+# EmeraldEconomy Messages - English
+# Language file for English-speaking players
+# Supports MiniMessage and legacy color codes
+# ========================================
+
+# Prefix prepended to all messages (unless message already contains {prefix})
+# Uses MiniMessage format: <gold> = orange color, <bold> = bold text
+# {prefix} placeholder in messages gets replaced with this value
+prefix: "<gold><bold>Emerald</gold> <gray>•</gray> "
+
+# Success messages
+# Sent when operations complete successfully
+success:
+  # Message sent after selling emeralds
+  # Placeholders: {emerald} = amount sold, {currency} = $, {money} = amount received
+  # Example: "Emerald • Success! You sold 64 emeralds and received $640.00."
+  convert_sell: "{prefix}<green>Success! You sold {emerald} emeralds and received {currency}{money}."
+  
+  # Message sent after buying emeralds
+  # Placeholders: {emerald} = amount bought, {currency} = $, {money} = cost paid
+  # Example: "Emerald • Success! You bought 32 emeralds for $320.00."
+  convert_buy: "{prefix}<green>Success! You bought {emerald} emeralds for {currency}{money}."
+  
+  # Message sent after selling all emeralds
+  # Placeholders: {emerald} = total amount sold, {currency} = $, {money} = total received
+  # Example: "Emerald • Successfully exchanged all emeralds: 128 emeralds → $1280.00."
+  convert_all: "{prefix}<green>Successfully exchanged all emeralds: {emerald} emeralds → {currency}{money}."
+  
+  # Message sent after /ecadmin reload
+  # No placeholders needed
+  reload: "{prefix}<green>Configuration successfully reloaded!"
+  
+  # Message sent after /ecadmin setprice
+  # Placeholders: {buy} = new buy price, {sell} = new sell price
+  # Example: "Emerald • Price updated successfully! Buy: 9.5, Sell: 10.0"
+  price_updated: "{prefix}<green>Price updated successfully! Buy: {buy}, Sell: {sell}"
+
+# Error messages
+# Sent when operations fail or validation fails
+error:
+  # Error when player doesn't have enough emeralds to sell
+  # Placeholders: {required} = needed amount, {current} = player's current amount
+  # Example: "Emerald • Not enough emeralds! Required: 64, but you have: 32"
+  not_enough_emerald: "{prefix}<red>Not enough emeralds! Required: {required}, but you have: {current}"
+  
+  # Error when player doesn't have enough money to buy
+  # Placeholders: {required} = needed amount, {current} = player's balance
+  # Example: "Emerald • Not enough money! Required: $640.00, but your balance: $320.00"
+  not_enough_money: "{prefix}<red>Not enough money! Required: {required}, but your balance: {current}"
+  
+  # Error when player's inventory is full
+  # No placeholders needed
+  inventory_full: "{prefix}<red>Inventory full! Free up some slots first."
+  
+  # Error when Vault economy is not found (shouldn't happen if plugin loaded)
+  # No placeholders needed
+  no_economy: "{prefix}<red>Economy system not detected! Contact an administrator."
+  
+  # Generic error when transaction fails unexpectedly
+  # Shown when database error, rollback failure, or unexpected exception occurs
+  transaction_failed: "{prefix}<red>Transaction failed! Please try again."
+  
+  # Error shown when player tries to trade during cooldown
+  # Placeholder: {seconds} = remaining cooldown time
+  # Example: "Emerald • Wait 3 seconds before making another transaction."
+  cooldown: "{prefix}<yellow>Wait {seconds} seconds before making another transaction."
+  
+  # Error shown when player exceeds rate limit (too many transactions per minute)
+  # No placeholders needed
+  rate_limit: "{prefix}<red>Too many transactions! Please wait a moment."
+  
+  # Error shown when player enters invalid amount (e.g., negative number, non-numeric)
+  # No placeholders needed
+  invalid_amount: "{prefix}<red>Invalid amount! Enter a proper number."
+  
+  # Error shown when player lacks permission to use command/feature
+  # No placeholders needed
+  no_permission: "{prefix}<red>You do not have permission to do this!"
+  
+  # Error shown when non-player (console) tries to run player-only command
+  # No placeholders needed
+  player_only: "{prefix}<red>This command can only be used by players!"
+  
+  # Error shown when admin enters invalid price in /ecadmin setprice
+  # No placeholders needed
+  invalid_price: "{prefix}<red>Invalid price! Enter a correct amount."
+
+# Info messages
+# Informational messages (not errors or successes)
+info:
+  # Message shown when opening GUI menu
+  # No placeholders needed
+  opened_gui: "{prefix}<yellow>Opening Emerald Converter..."
+  
+  # Multi-line message showing current prices and dynamic pricing stats
+  # Sent by /ecadmin info command
+  # Uses | (pipe) to indicate multi-line YAML string
+  # Placeholders: {buy} = buy price, {sell} = sell price, {depletion_factor} = depletion %,
+  #              {total_converted} = global emeralds converted, {tax_rate} = tax %
+  # Example output:
+  # "Emerald • Current Prices:
+  #  Buy Price: $9.50
+  #  Sell Price: $10.00
+  #  
+  #  Dynamic Pricing Stats:
+  #  Depletion Factor: 98.50%
+  #  Total Converted: 15000 emeralds
+  #  Tax Rate: 5.0%"
+  current_prices: |
+    {prefix}<gold>Current Prices:
+    <white>Buy Price: <green>${buy}
+    <white>Sell Price: <green>${sell}
+    
+    <gold>Dynamic Pricing Stats:
+    <white>Depletion Factor: <green>{depletion_factor}
+    <white>Total Converted: <green>{total_converted} emeralds
+    <white>Tax Rate: <green>{tax_rate}
+  
+  # Message showing player's personal stats
+  # Sent by /ecadmin stats [player] command
+  # Placeholders: {emerald_player_name} = player's name, {total} = their total converted
+  # Example: "Emerald • Total conversions of Steve: 1500 emeralds"
+  stats: "{prefix}<green>Total conversions of {emerald_player_name}: {total} emeralds"
+  
+  # Message shown during long-running transaction (not currently used)
+  # No placeholders needed
+  processing: "{prefix}<yellow>Processing transaction..."
+
+# Affordability messages (for placeholders)
+# These are used by PlaceholderAPI placeholders like %emeraldeconomy_can_afford_1_emerald%
+# Not sent as chat messages, but displayed in GUI lore
+affordability:
+  # Shown when player CAN afford an item
+  # Green checkmark (✔)
+  can_afford: "<green>✔"
+  
+  # Shown when player CANNOT afford an item
+  # Red X (✘)
+  cannot_afford: "<red>✘"
+  
+  # Shown when player HAS emeralds in inventory
+  # Green checkmark (✔)
+  has_emeralds: "<green>✔"
+  
+  # Shown when player has NO emeralds in inventory
+  # Red X (✘)
+  no_emeralds: "<red>✘"
+
+# Command messages
+# Messages shown when commands are used incorrectly or for help
+command:
+  # Generic usage hint (not currently used)
+  # Placeholders: {command} = command name, {args} = argument list
+  usage: "{prefix}<yellow>Usage: /{command} {args}"
+  
+  # Multi-line help message for /ecadmin command
+  # Shows all available admin subcommands
+  # Example output:
+  # "Emerald • Admin Commands
+  #  /ecadmin reload - Reload configuration
+  #  /ecadmin stats [player] - View conversion statistics
+  #  /ecadmin setprice <buy|sell> <price> - Set price"
+  admin_help: |
+    {prefix}<gold>Admin Commands
+    <green>/ecadmin reload <white>- Reload configuration
+    <green>/ecadmin stats <yellow>[player] <white>- View conversion statistics
+    <green>/ecadmin setprice <yellow><buy|sell> <price> <white>- Set price
+
+# Transaction log messages (internal)
+# Format string for transaction log file (transactions.log)
+# NOT shown to players, only written to log file
+transaction:
+  # Log format with all transaction details
+  # Placeholders: {timestamp} = ISO timestamp, {uuid} = player UUID,
+  #              {name} = player name, {type} = BUY/SELL,
+  #              {emerald} = amount, {money} = value, {price} = price at time,
+  #              {txid} = unique transaction ID
+  # Example: "2025-01-15T10:30:45Z | UUID=123e4567-e89b-12d3 | name=Steve | TYPE=SELL | EMERALD=64 | MONEY=640.00 | PRICE=10.00 | TXID=ec_ABC123_000042"
+  log_format: "{timestamp} | UUID={uuid} | name={name} | TYPE={type} | EMERALD={emerald} | MONEY={money} | PRICE={price} | TXID={txid}"
+
+# Custom amount messages
+# Messages for the custom amount input feature (type amount in chat)
+custom_amount:
+  # Prompt shown when custom amount session starts
+  # No placeholders needed
+  prompt: "{prefix}<yellow>Enter the amount of emeralds (type in chat):"
+  
+  # Message shown when player cancels custom amount input
+  # By typing "cancel" or "batal"
+  cancelled: "{prefix}<red>Custom amount conversion cancelled."
+  
+  # Message shown when custom amount session times out (60 seconds)
+  # Not currently implemented in code
+  timeout: "{prefix}<red>Time's up! Custom amount conversion cancelled."
+  
+  # Error message when player types invalid input (not a number)
+  # Example: player types "abc" instead of "32"
+  invalid_input: "{prefix}<red>Invalid input! Please enter a number."

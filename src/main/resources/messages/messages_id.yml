@@ -1,0 +1,207 @@
+# ========================================
+# EmeraldEconomy Messages - Bahasa Indonesia
+# Language file for Indonesian-speaking players
+# Supports MiniMessage and legacy color codes
+# ========================================
+
+# Prefix yang ditambahkan di awal semua pesan
+# Prefix prepended to all messages
+# Format sama seperti versi English: <gold> = warna orange, <bold> = tebal
+# Same format as English version: <gold> = orange color, <bold> = bold text
+prefix: "<gold><bold>Emerald</gold> <gray>•</gray> "
+
+# Success messages (Pesan Sukses)
+# Dikirim ketika operasi berhasil
+# Sent when operations succeed
+success:
+  # Pesan setelah menjual emerald
+  # Message after selling emeralds
+  # Placeholder: {emerald} = jumlah terjual, {currency} = $, {money} = uang diterima
+  # Placeholders: {emerald} = amount sold, {currency} = $, {money} = received amount
+  # Contoh: "Emerald • Berhasil! Kamu menjual 64 emerald dan menerima Rp640.000."
+  # Example: "Emerald • Success! You sold 64 emeralds and received Rp640,000."
+  convert_sell: "{prefix}<green>Berhasil! Kamu menjual {emerald} emerald dan menerima {currency}{money}."
+  
+  # Pesan setelah membeli emerald
+  # Message after buying emeralds
+  # Placeholder: {emerald} = jumlah beli, {currency} = $, {money} = harga bayar
+  # Placeholders: {emerald} = amount bought, {currency} = $, {money} = cost paid
+  convert_buy: "{prefix}<green>Berhasil! Kamu membeli {emerald} emerald seharga {currency}{money}."
+  
+  # Pesan setelah menjual semua emerald
+  # Message after selling all emeralds
+  # Placeholder: {emerald} = total terjual, {currency} = $, {money} = total diterima
+  # Placeholders: {emerald} = total sold, {currency} = $, {money} = total received
+  convert_all: "{prefix}<green>Berhasil menukar semua emerald: {emerald} buah → {currency}{money}."
+  
+  # Pesan setelah /ecadmin reload
+  # Message after /ecadmin reload
+  reload: "{prefix}<green>Konfigurasi berhasil dimuat ulang!"
+  
+  # Pesan setelah /ecadmin setprice
+  # Message after /ecadmin setprice
+  # Placeholder: {buy} = harga beli baru, {sell} = harga jual baru
+  # Placeholders: {buy} = new buy price, {sell} = new sell price
+  price_updated: "{prefix}<green>Harga berhasil diperbarui! Beli: {buy}, Jual: {sell}"
+
+# Error messages (Pesan Error)
+# Dikirim ketika operasi gagal atau validasi gagal
+# Sent when operations fail or validation fails
+error:
+  # Error ketika pemain tidak punya cukup emerald untuk jual
+  # Error when player doesn't have enough emeralds to sell
+  # Placeholder: {required} = jumlah dibutuhkan, {current} = jumlah sekarang
+  # Placeholders: {required} = needed amount, {current} = current amount
+  not_enough_emerald: "{prefix}<red>Emerald tidak cukup! Butuh: {required}, sedangkan kamu punya: {current}"
+  
+  # Error ketika pemain tidak punya cukup uang untuk beli
+  # Error when player doesn't have enough money to buy
+  # Placeholder: {required} = uang dibutuhkan, {current} = saldo sekarang
+  # Placeholders: {required} = needed amount, {current} = current balance
+  not_enough_money: "{prefix}<red>Uang tidak cukup! Butuh: {required}, sedangkan uang kamu: {current}"
+  
+  # Error ketika inventory pemain penuh
+  # Error when player's inventory is full
+  inventory_full: "{prefix}<red>Inventory penuh! Kosongkan beberapa slot terlebih dahulu."
+  
+  # Error ketika sistem ekonomi Vault tidak ditemukan
+  # Error when Vault economy system is not found
+  no_economy: "{prefix}<red>Sistem ekonomi tidak terdeteksi! Hubungi administrator."
+  
+  # Error generik ketika transaksi gagal tidak terduga
+  # Generic error when transaction fails unexpectedly
+  transaction_failed: "{prefix}<red>Transaksi gagal! Silakan coba lagi."
+  
+  # Error ditampilkan ketika pemain coba transaksi saat cooldown
+  # Error shown when player tries to trade during cooldown
+  # Placeholder: {seconds} = sisa waktu cooldown
+  # Placeholder: {seconds} = remaining cooldown time
+  cooldown: "{prefix}<yellow>Tunggu {seconds} detik sebelum melakukan transaksi lagi."
+  
+  # Error ketika pemain melebihi batas transaksi per menit
+  # Error when player exceeds rate limit (too many transactions per minute)
+  rate_limit: "{prefix}<red>Terlalu banyak transaksi! Tunggu sebentar."
+  
+  # Error ketika pemain memasukkan jumlah tidak valid
+  # Error when player enters invalid amount
+  invalid_amount: "{prefix}<red>Jumlah tidak valid! Masukkan angka yang benar."
+  
+  # Error ketika pemain tidak punya permission
+  # Error when player lacks permission
+  no_permission: "{prefix}<red>Kamu tidak memiliki izin untuk melakukan ini!"
+  
+  # Error ketika non-pemain (console) coba jalankan command pemain
+  # Error when non-player (console) tries to run player-only command
+  player_only: "{prefix}<red>Perintah ini hanya dapat digunakan oleh pemain!"
+  
+  # Error ketika admin memasukkan harga tidak valid di /ecadmin setprice
+  # Error when admin enters invalid price in /ecadmin setprice
+  invalid_price: "{prefix}<red>Harga tidak valid! Masukkan nominal yang benar."
+
+# Info messages (Pesan Informasi)
+# Pesan informasional (bukan error atau sukses)
+# Informational messages (not errors or successes)
+info:
+  # Pesan saat membuka GUI menu
+  # Message when opening GUI menu
+  opened_gui: "{prefix}<yellow>Membuka Emerald Converter..."
+  
+  # Pesan multi-line menampilkan harga dan statistik dynamic pricing
+  # Multi-line message showing prices and dynamic pricing stats
+  # Dikirim oleh command /ecadmin info
+  # Sent by /ecadmin info command
+  current_prices: |
+    {prefix}<gold>Harga Saat Ini:
+    <gray>Harga Beli: <green>${buy}
+    <gray>Harga Jual: <green>${sell}
+    
+    <gold>Statistik Dynamic Pricing:
+    <white>Faktor Depletion: <white>{depletion_factor}
+    <white>Total Terkonversi: <white>{total_converted} emerald
+    <white>Tarif Pajak: <white>{tax_rate}
+  
+  # Pesan menampilkan statistik pribadi pemain
+  # Message showing player's personal stats
+  # Dikirim oleh command /ecadmin stats [player]
+  # Sent by /ecadmin stats [player] command
+  stats: "{prefix}<green>Total konversi dari {emerald_player_name}: {total} emerald"
+  
+  # Pesan saat transaksi berlangsung lama (tidak digunakan saat ini)
+  # Message during long-running transaction (not currently used)
+  processing: "{prefix}<yellow>Sedang memproses transaksi..."
+
+# Affordability messages (Pesan Keterjangkauan)
+# Digunakan oleh placeholder PlaceholderAPI
+# Used by PlaceholderAPI placeholders
+# Tidak dikirim sebagai pesan chat, tapi ditampilkan di lore GUI
+# Not sent as chat messages, but displayed in GUI lore
+affordability:
+  # Ditampilkan ketika pemain BISA membeli item
+  # Shown when player CAN afford an item
+  can_afford: "<green>✔"
+  
+  # Ditampilkan ketika pemain TIDAK BISA membeli item
+  # Shown when player CANNOT afford an item
+  cannot_afford: "<red>✘"
+  
+  # Ditampilkan ketika pemain PUNYA emerald di inventory
+  # Shown when player HAS emeralds in inventory
+  has_emeralds: "<green>✔"
+  
+  # Ditampilkan ketika pemain TIDAK PUNYA emerald di inventory
+  # Shown when player has NO emeralds in inventory
+  no_emeralds: "<red>✘"
+
+# Command messages (Pesan Command)
+# Pesan ditampilkan ketika command digunakan salah atau untuk bantuan
+# Messages shown when commands are used incorrectly or for help
+command:
+  # Hint penggunaan generik (tidak digunakan saat ini)
+  # Generic usage hint (not currently used)
+  usage: "{prefix}<yellow>Penggunaan: /{command} {args}"
+  
+  # Pesan bantuan multi-line untuk command /ecadmin
+  # Multi-line help message for /ecadmin command
+  # Menampilkan semua subcommand admin yang tersedia
+  # Shows all available admin subcommands
+  admin_help: |
+    {prefix}<gold>Perintah Admin
+    <green>/ecadmin reload <white>- Muat ulang konfigurasi
+    <green>/ecadmin stats <yellow>[player] <white>- Lihat statistik konversi
+    <green>/ecadmin setprice <yellow><buy|sell> <price> <white>- Atur harga
+
+# Transaction log messages (internal) (Pesan Log Transaksi)
+# Format string untuk file log transaksi (transactions.log)
+# Format string for transaction log file (transactions.log)
+# TIDAK ditampilkan ke pemain, hanya ditulis ke file log
+# NOT shown to players, only written to log file
+transaction:
+  # Format log dengan semua detail transaksi
+  # Log format with all transaction details
+  log_format: "{timestamp} | UUID={uuid} | name={name} | TYPE={type} | EMERALD={emerald} | MONEY={money} | PRICE={price} | TXID={txid}"
+
+# Custom amount messages (Pesan Jumlah Kustom)
+# Pesan untuk fitur input jumlah kustom (ketik jumlah di chat)
+# Messages for custom amount input feature (type amount in chat)
+custom_amount:
+  # Prompt ditampilkan saat sesi custom amount dimulai
+  # Prompt shown when custom amount session starts
+  prompt: "{prefix}<yellow>Masukkan jumlah emerald (ketik di chat):"
+  
+  # Pesan saat pemain membatalkan input custom amount
+  # Message when player cancels custom amount input
+  # Dengan mengetik "cancel" atau "batal"
+  # By typing "cancel" or "batal"
+  cancelled: "{prefix}<red>Konversi jumlah khusus dibatalkan."
+  
+  # Pesan saat sesi custom amount timeout (60 detik)
+  # Message when custom amount session times out (60 seconds)
+  # Tidak diimplementasikan dalam kode saat ini
+  # Not currently implemented in code
+  timeout: "{prefix}<red>Waktu habis! Konversi jumlah khusus dibatalkan."
+  
+  # Pesan error saat pemain mengetik input tidak valid (bukan angka)
+  # Error message when player types invalid input (not a number)
+  # Contoh: pemain ketik "abc" instead of "32"
+  # Example: player types "abc" instead of "32"
+  invalid_input: "{prefix}<red>Input tidak valid! Harap masukkan angka."
