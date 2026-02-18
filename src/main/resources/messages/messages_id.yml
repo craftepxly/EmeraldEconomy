@@ -40,8 +40,8 @@ success:
   
   # Pesan setelah /ecadmin setprice
   # Message after /ecadmin setprice
-  # Placeholder: {buy} = harga beli baru, {sell} = harga jual baru
-  # Placeholders: {buy} = new buy price, {sell} = new sell price
+  # Placeholder: {buy} = harga beli (player BAYAR), {sell} = harga jual (player TERIMA)
+  # Placeholders: {buy} = player buy price (player pays), {sell} = player sell price (player receives)
   price_updated: "{prefix}<green>Harga berhasil diperbarui! Beli: {buy}, Jual: {sell}"
 
 # Error messages (Pesan Error)

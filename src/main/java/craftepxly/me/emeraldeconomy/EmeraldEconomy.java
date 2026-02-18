@@ -369,14 +369,16 @@ public class EmeraldEconomy extends JavaPlugin {
      */
     private void logBanner() {
         // Log ASCII art banner
-        getLogger().info("╔═══════════════════════════════════╗");
-        getLogger().info("║                                   ║");
-        getLogger().info("║   EmeraldEconomy                  ║");
-        getLogger().info("║   Advanced Emerald Converter      ║");
-        getLogger().info("║                                   ║");
-        getLogger().info("║   Author: CraftePxly              ║");
-        getLogger().info("║                                   ║");
-        getLogger().info("╚═══════════════════════════════════╝");
+        getLogger().info("");
+        getLogger().info("  ___                      _     _   ___                                      ");
+        getLogger().info(" | __|_ __  ___ _ _ __ _| | __| | | __|__ ___ _ _  ___ _ __  _  _ ");
+        getLogger().info(" | _|| '  \\/ -_) '_/ _` | |/ _` | | _|/ _/ _ \\ ' \\/ _ \\ '  \\| || |");
+        getLogger().info(" |___|_|_|_\\___|_| \\__,_|_|\\__,_| |___\\__\\___/_||_\\___/_|_|_|\\_, |");
+        getLogger().info("                                                              |__/ ");
+        getLogger().info("");
+        getLogger().info("  Version: " + getDescription().getVersion() + " | Author: CraftePxly");
+        getLogger().info("  Loading plugin...");
+        getLogger().info("");
     }
 
     // ===== Getters for Managers =====

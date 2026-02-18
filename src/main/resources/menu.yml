@@ -1,6 +1,5 @@
 # ========================================
 # EmeraldEconomy Menu Configuration
-# Action System (DeluxeMenus-style)
 # This file defines all GUI menus using a custom action system
 # ========================================
 
@@ -121,10 +120,10 @@ menus:
           - "<white>into money."
           - ""
           # Price info (placeholders replaced at runtime)
-          # %emeraldeconomy_price_buy% = what server pays per emerald
-          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_buy%"
+          # %emeraldeconomy_price_sell% = price player RECEIVES per emerald when selling
+          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_sell%"
           # Tax calculation: 5% of sell price
-          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_1_tax%"
+          - " <red>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_sell_1_tax%"
           # Net amount player receives (price - tax)
           - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_1_value%"
           - ""
@@ -167,12 +166,12 @@ menus:
           - "<white>Sell 64 emerald at once"
           - "<white>from your inventory."
           - ""
-          # Sell price per emerald
-          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_buy%"
+          # Sell price per emerald (what player RECEIVES per emerald)
+          - " <red>• <white>Sell Price: <green>$%emeraldeconomy_price_sell%"
           # Gross value before tax (64 × price)
           - " <red>• <white>Gross value: <green>$%emeraldeconomy_stack_sell_value%"
           # Tax on 64 emeralds
-          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_64_tax%"
+          - " <red>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_sell_64_tax%"
           # Net amount player receives
           - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_64_value%"
           - ""
@@ -215,7 +214,7 @@ menus:
           # Value before tax
           - " <red>• <white>Gross value: <green>$%emeraldeconomy_all_sell_value%"
           # Tax amount
-          - " <red>• <white>Tax (5%%): <green>$%emeraldeconomy_sell_all_tax%"
+          - " <red>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_sell_all_tax%"
           # Final payout
           - " <red>• <white>You receive: <green>$%emeraldeconomy_sell_all_value%"
           - ""
@@ -255,7 +254,7 @@ menus:
           - ""
           # Dynamic pricing info
           - "<yellow>Dynamic Pricing Statistics:"
-          - "<yellow>•  <white>Tax Rate: <green>%emeraldeconomy_transaction_tax_rate%"
+          - "<yellow>•  <white>Tax Rate: <green>%emeraldeconomy_player_tax_rate%"
           - "<yellow>•  <white>Depletion: <green>%emeraldeconomy_depletion_factor%"
           - "<yellow>•  <white>Global Total Converted: <green>%emeraldeconomy_total_emeralds_converted%"
           - ""
@@ -308,10 +307,10 @@ menus:
           - "<white>Buy 1 piece of emerald"
           - "<white>using money."
           - ""
-          # Price player pays per emerald
-          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_sell%"
+          # Price player PAYS per emerald when buying
+          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_buy%"
           # Tax added to cost (player pays MORE due to tax)
-          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_buy_1_tax%"
+          - " <green>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_buy_1_tax%"
           # Total cost including tax
           - " <green>• <white>Total Price: <green>$%emeraldeconomy_buy_1_cost%"
           - ""
@@ -321,9 +320,8 @@ menus:
           - ""
           - "<green>• <green>Click to buy"
         actions:
-          # Check if player has enough money
-          # This checks player's balance against placeholder value
-          - "[requirement]has_money:%emeraldeconomy_price_sell%"
+          # Check if player has enough money (uses buy price = what player pays)
+          - "[requirement]has_money:%emeraldeconomy_price_buy%"
           # convert_buy:1 = calls handleConvertBuy(player, 1) in ActionExecutor
           - "[async]convert_buy:1"
           # Play pling sound (note block)
@@ -344,12 +342,12 @@ menus:
           - "<white>Buy 64 pieces of emerald"
           - "<white>using money."
           - ""
-          # Price per emerald
-          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_sell%"
+          # Price player PAYS per emerald when buying
+          - " <green>• <white>Buy Price: <green>$%emeraldeconomy_price_buy%"
           # Base cost (64 × price)
           - " <green>• <white>Base Cost (64×): <green>$%emeraldeconomy_stack_buy_value%"
           # Tax on 64 emeralds
-          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_buy_64_tax%"
+          - " <green>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_buy_64_tax%"
           # Total cost (base + tax)
           - " <green>• <white>Total Price: <green>$%emeraldeconomy_buy_64_cost%"
           - ""
@@ -387,7 +385,7 @@ menus:
           # Cost to fill all empty space
           - " <green>• <white>Base Cost: <green>$%emeraldeconomy_inventory_buy_value%"
           # Tax on that amount
-          - " <green>• <white>Tax (5%%): <green>$%emeraldeconomy_inventory_buy_tax%"
+          - " <green>• <white>Tax (%emeraldeconomy_player_tax_rate%): <green>$%emeraldeconomy_inventory_buy_tax%"
           # Total cost
           # BUG IN LORE: Shows %emeraldeconomy_stack_buy_value% instead of _inventory_buy_value_with_tax%
           - " <green>• <white>Total Price: <green>$%emeraldeconomy_stack_buy_value%"

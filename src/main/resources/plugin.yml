@@ -111,3 +111,25 @@ permissions:
     # Who gets this by default
     # op = only server operators
     default: op
+
+  # Tax Group Permissions
+  # Each group defined in config.yml tax_groups gets its own permission node.
+  # Format: emeraldeconomy.group.<group_name>
+  # Assign via your permission plugin (LuckPerms, PermissionsEx, etc.)
+  # Players with multiple group permissions receive the LOWEST (best) tax rate.
+  # Players with no matching group use the global transaction_tax_rate as fallback.
+
+  # Tax group "citizens" (11% tax by default config)
+  emeraldeconomy.group.citizens:
+    description: "Tax group: citizens (see tax_groups.citizens.transaction_tax_rate in config.yml)"
+    default: false
+
+  # Tax group "vip" (6% tax by default config)
+  emeraldeconomy.group.vip:
+    description: "Tax group: vip (see tax_groups.vip.transaction_tax_rate in config.yml)"
+    default: false
+
+  # Tax group "vip+" (4% tax by default config)
+  emeraldeconomy.group.vip+:
+    description: "Tax group: vip+ (see tax_groups.vip+.transaction_tax_rate in config.yml)"
+    default: false

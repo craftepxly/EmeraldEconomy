@@ -107,11 +107,14 @@ public class TransactionManager {
             }
 
             // Calculate money to give (per emerald price)
-            double pricePerEmerald = plugin.getPriceManager().getBuyPrice();
+            // Player SELLS emeralds → receives the SELL price per emerald
+            double pricePerEmerald = plugin.getPriceManager().getSellPrice();
             double moneyAmount = pricePerEmerald * amount;
 
-            // Apply transaction tax (money sink)
-            double tax = plugin.getPriceManager().getTransactionTax(moneyAmount);
+            // Resolve player's effective tax rate (group-based or global fallback)
+            double playerTaxRate = plugin.getConfigManager().getPlayerTaxRate(player);
+            // Apply transaction tax (money sink) using player's rate
+            double tax = plugin.getPriceManager().getTransactionTax(moneyAmount, playerTaxRate);
             double finalAmount = moneyAmount - tax; // Player receives less due to tax
 
             // Execute transaction on main thread (Bukkit API requirement)
@@ -235,11 +238,14 @@ public class TransactionManager {
             }
 
             // Calculate cost (per emerald price)
-            double pricePerEmerald = plugin.getPriceManager().getSellPrice();
+            // Player BUYS emeralds → pays the BUY price per emerald
+            double pricePerEmerald = plugin.getPriceManager().getBuyPrice();
             double cost = pricePerEmerald * amount;
 
-            // Apply transaction tax
-            double tax = plugin.getPriceManager().getTransactionTax(cost);
+            // Resolve player's effective tax rate (group-based or global fallback)
+            double playerTaxRate = plugin.getConfigManager().getPlayerTaxRate(player);
+            // Apply transaction tax using player's rate
+            double tax = plugin.getPriceManager().getTransactionTax(cost, playerTaxRate);
             double totalCost = cost + tax;  // Player pays more due to tax
 
             // Check if player has enough money (including tax)

@@ -24,16 +24,20 @@ currency:
   
 # Pricing configuration
 # Controls base prices before dynamic adjustments
+# All prices are from the PLAYER's perspective:
+#   buy  = what the player PAYS to buy emeralds from the server
+#   sell = what the player RECEIVES when selling emeralds to the server
+# Invariant: buy >= sell  (buy price must be >= sell price to prevent arbitrage)
 prices:
-  # Price when server BUYS emerald from player (player receives money)
-  # This is the base value - actual price may vary with dynamic pricing
-  # Example: If buy = 9.5, player gets $9.50 per emerald when selling
-  buy: 9.5
-  
-  # Price when server SELLS emerald to player (player pays money)
-  # This is the base cost - actual price may vary with dynamic pricing
-  # Example: If sell = 10.0, player pays $10.00 per emerald when buying
-  sell: 10.0
+  # Price player PAYS per emerald when BUYING from the server (player spends money)
+  # This is the base value - actual price may vary with dynamic pricing enabled
+  # Example: If buy = 10.0, player pays $10.00 per emerald when buying
+  buy: 10.0
+
+  # Price player RECEIVES per emerald when SELLING to the server (player earns money)
+  # This is the base value - actual price may vary with dynamic pricing enabled
+  # Example: If sell = 9.5, player receives $9.50 per emerald when selling
+  sell: 9.5
 
 # Dynamic pricing system (Advanced Supply-Demand Economics)
 # Controls the automatic price adjustment based on market activity
@@ -109,7 +113,43 @@ dynamic_pricing:
   # For SELL: player receives (base_value - tax)
   # For BUY: player pays (base_cost + tax)
   # Example: 0.05 = 5% tax on all transactions
+  # NOTE: This is the FALLBACK rate. If tax_groups (below) is configured,
+  #       players with a matching group permission use that rate instead.
   transaction_tax_rate: 0.05  # 5% tax (0.05 = 5%, 0.10 = 10%)
+
+# ================================================
+# Permission-Based Tax Groups
+# ================================================
+# Assign different tax rates to player groups via permissions.
+#
+# Permission format: emeraldeconomy.group.<group_name>
+# Example: group "citizens" → permission "emeraldeconomy.group.citizens"
+#
+# How it works:
+#   1. When a player transacts, plugin checks which groups they have permission for.
+#   2. If the player matches multiple groups, the LOWEST (most favorable) rate is used.
+#   3. If player has NO matching group, falls back to dynamic_pricing.transaction_tax_rate.
+#
+# Give permissions using your permission plugin (LuckPerms, etc.):
+#   /lp user <player> permission set emeraldeconomy.group.citizens true
+#   /lp group vip permission set emeraldeconomy.group.vip true
+#
+# To disable group tax entirely, leave this section empty: tax_groups: {}
+tax_groups:
+  # Group "citizens" — default citizens, 5% tax
+  # Permission: emeraldeconomy.group.citizens
+  citizens:
+    transaction_tax_rate: 0.05    # 5%
+
+  # Group "vip" — community leaders, 3% tax discount
+  # Permission: emeraldeconomy.group.vip
+  vip:
+    transaction_tax_rate: 0.03    # 3%
+
+  # Group "vip+" — VIP+ players, 1% tax (best rate)
+  # Permission: emeraldeconomy.group.vip+
+  vip+:
+    transaction_tax_rate: 0.01    # 1%
 
 # Transaction settings
 # Controls transaction logging and player limits
@@ -195,7 +235,7 @@ storage:
   #   - Best for large servers (200+ players)
   #   - Supports BungeeCord networks (shared database)
   #   - Connection pooling for high performance
-  type: YAML
+  type: SQLITE
 
   # MySQL Configuration (only used when type: MYSQL)
   # These settings are ignored if type is YAML or SQLITE

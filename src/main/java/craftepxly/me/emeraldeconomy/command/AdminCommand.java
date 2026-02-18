@@ -199,7 +199,10 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     /**
      * Handles the "/ecadmin setprice buy|sell price" subcommand.
      * Updates the base buy or sell price in config.yml and reloads the price manager.
-     * 
+     *
+     * buy  = price player PAYS when buying emeralds from the server
+     * sell = price player RECEIVES when selling emeralds to the server
+     *
      * @param sender The command sender
      * @param args   The full argument array (args[0] = "setprice", args[1] = "buy"/"sell", args[2] = price)
      */
@@ -210,7 +213,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return;
         }
         
-        // Get the price type (buy or sell)
+        // Get the price type (player perspective: buy = player buys, sell = player sells)
         String priceType = args[1].toLowerCase();
         double price;
         
@@ -229,12 +232,12 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             return;
         }
         
-        // Update the config based on price type
+        // Update the config based on price type (player perspective)
         if (priceType.equals("buy")) {
-            // Set the buy price in config.yml
+            // Set prices.buy = what player PAYS when buying emeralds
             plugin.getConfig().set("prices.buy", price);
         } else if (priceType.equals("sell")) {
-            // Set the sell price in config.yml
+            // Set prices.sell = what player RECEIVES when selling emeralds
             plugin.getConfig().set("prices.sell", price);
         } else {
             // Invalid price type
@@ -256,22 +259,22 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
     
     /**
      * Handles the "/ecadmin info" subcommand.
-     * Displays current buy/sell prices and dynamic pricing stats.
-     * 
+     * Displays current buy/sell prices, dynamic pricing stats, and configured tax groups.
+     *
      * @param sender The command sender
      */
     private void handleInfo(CommandSender sender) {
-        // Get current buy price from price manager
+        // Get current buy price from price manager (what player PAYS when buying)
         double buyPrice = plugin.getPriceManager().getBuyPrice();
-        // Get current sell price from price manager
+        // Get current sell price from price manager (what player RECEIVES when selling)
         double sellPrice = plugin.getPriceManager().getSellPrice();
         // Get depletion factor (resource scarcity multiplier)
         double depletionFactor = plugin.getPriceManager().getDepletionFactor();
         // Get total emeralds converted globally (all players)
         long totalConverted = plugin.getPriceManager().getTotalEmeraldsConverted();
-        // Get transaction tax rate (money sink percentage)
+        // Get global (fallback) transaction tax rate
         double taxRate = plugin.getPriceManager().getTransactionTaxRate();
-        
+
         // Build and send the info message with all placeholders
         plugin.getMessageManager().builder("info.current_prices")
                 .placeholder("buy", buyPrice)
@@ -281,6 +284,19 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 .placeholder("total_converted", totalConverted)
                 .placeholder("tax_rate", String.format("%.1f%%", taxRate * 100))
                 .send(sender);
+
+        // Display configured tax groups (if any)
+        java.util.Map<String, Double> taxGroups = plugin.getConfigManager().getTaxGroups();
+        if (!taxGroups.isEmpty()) {
+            sender.sendMessage("§6§l[Tax Groups]");
+            sender.sendMessage("§7Global fallback: §e" + String.format("%.1f%%", taxRate * 100));
+            taxGroups.forEach((groupName, rate) -> {
+                String perm = "emeraldeconomy.group." + groupName.toLowerCase();
+                sender.sendMessage(String.format(
+                        "§7• §b%s §7(permission: §f%s§7) §7→ §a%.1f%%",
+                        groupName, perm, rate * 100));
+            });
+        }
     }
     
     /**

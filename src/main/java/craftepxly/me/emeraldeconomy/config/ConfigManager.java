@@ -240,4 +240,94 @@ public class ConfigManager {
         // Read debug from config (default false)
         return config.getBoolean("debug", false);
     }
+
+    // =========================================================================
+    // Tax Group Methods
+    // =========================================================================
+
+    /**
+     * Returns the global (fallback) transaction tax rate from config.
+     * Used when a player has no matching tax group permission.
+     *
+     * @return Global tax rate (default: 0.05 = 5%)
+     */
+    public double getGlobalTaxRate() {
+        return config.getDouble("dynamic_pricing.transaction_tax_rate", 0.05);
+    }
+
+    /**
+     * Returns the effective transaction tax rate for a specific player.
+     *
+     * <p>Resolution order:
+     * <ol>
+     *   <li>Iterate every entry under {@code tax_groups} in config.yml.</li>
+     *   <li>For each group whose permission ({@code emeraldeconomy.group.<name>})
+     *       the player holds, collect its {@code transaction_tax_rate}.</li>
+     *   <li>Return the <b>lowest</b> rate found (most beneficial to the player).</li>
+     *   <li>If the player has no matching group, fall back to
+     *       {@code dynamic_pricing.transaction_tax_rate}.</li>
+     * </ol>
+     *
+     * @param player The online player whose tax rate to calculate
+     * @return Effective tax rate for this player (0.0 – 1.0)
+     */
+    public double getPlayerTaxRate(org.bukkit.entity.Player player) {
+        // Get the tax_groups section from config.yml
+        org.bukkit.configuration.ConfigurationSection groups =
+                config.getConfigurationSection("tax_groups");
+
+        // If section is missing or empty, return global fallback immediately
+        if (groups == null || groups.getKeys(false).isEmpty()) {
+            return getGlobalTaxRate();
+        }
+
+        double lowestRate = Double.MAX_VALUE;
+        boolean foundAnyGroup = false;
+
+        // Iterate every group key (e.g., "rakyat", "rt", "vip")
+        for (String groupName : groups.getKeys(false)) {
+            org.bukkit.configuration.ConfigurationSection groupSection =
+                    groups.getConfigurationSection(groupName);
+            if (groupSection == null) continue;
+
+            // Permission node: emeraldeconomy.group.<groupName>
+            String permission = "emeraldeconomy.group." + groupName.toLowerCase();
+
+            // Check if player holds this group's permission
+            if (player.hasPermission(permission)) {
+                double rate = groupSection.getDouble("transaction_tax_rate", getGlobalTaxRate());
+
+                // Track the lowest (most favorable) rate
+                if (rate < lowestRate) {
+                    lowestRate = rate;
+                }
+                foundAnyGroup = true;
+            }
+        }
+
+        // Return lowest group rate, or global fallback if player has no matching group
+        return foundAnyGroup ? lowestRate : getGlobalTaxRate();
+    }
+
+    /**
+     * Returns a summary map of all configured tax groups for display purposes
+     * (e.g., /ecadmin info command).
+     *
+     * @return Map of &lt;groupName, taxRate&gt; entries, or empty map if no groups defined
+     */
+    public java.util.Map<String, Double> getTaxGroups() {
+        java.util.Map<String, Double> result = new java.util.LinkedHashMap<>();
+        org.bukkit.configuration.ConfigurationSection groups =
+                config.getConfigurationSection("tax_groups");
+        if (groups == null) return result;
+
+        for (String groupName : groups.getKeys(false)) {
+            org.bukkit.configuration.ConfigurationSection section =
+                    groups.getConfigurationSection(groupName);
+            if (section != null) {
+                result.put(groupName, section.getDouble("transaction_tax_rate", getGlobalTaxRate()));
+            }
+        }
+        return result;
+    }
 }
