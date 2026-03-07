@@ -11,6 +11,8 @@ import org.bukkit.inventory.ItemStack;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -32,7 +34,7 @@ public class TransactionManager {
 
     /**
      * Constructs a new TransactionManager.
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public TransactionManager(EmeraldEconomy plugin) {
@@ -47,13 +49,19 @@ public class TransactionManager {
             lastTransaction.entrySet().removeIf(entry -> now - entry.getValue() > 60000);
             // Remove expired transaction counters
             transactionCounters.entrySet().removeIf(entry -> entry.getValue().isExpired());
+            // [SECURITY FIX: HIGH-05] Clean up idle player locks to prevent memory leak
+            // Only remove locks that are not currently held and have no recent transaction
+            playerLocks.entrySet().removeIf(entry -> {
+                ReentrantLock lock = entry.getValue();
+                return !lock.isLocked() && !lastTransaction.containsKey(entry.getKey());
+            });
         }, 1200L, 1200L); // Every minute (1200 ticks = 60 seconds)
     }
 
     /**
      * Gets or creates a ReentrantLock for a player.
      * Ensures only one transaction per player at a time.
-     * 
+     *
      * @param playerId Player UUID
      * @return ReentrantLock for this player
      */
@@ -64,7 +72,7 @@ public class TransactionManager {
 
     /**
      * Executes a sell transaction (player sells emeralds to server).
-     * 
+     *
      * @param player The player
      * @param amount Emerald amount to sell
      * @return TransactionResult with success/failure and message
@@ -87,8 +95,19 @@ public class TransactionManager {
 
         // Get player's lock (ensures only one transaction at a time for this player)
         ReentrantLock lock = getLock(playerId);
-        // Acquire lock (blocks until available)
-        lock.lock();
+        // [SECURITY FIX: CRIT-01] Acquire lock with timeout — prevents permanent blocking
+        boolean acquired;
+        try {
+            acquired = lock.tryLock(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return TransactionResult.failure("error.transaction_failed");
+        }
+        if (!acquired) {
+            // Lock timeout — another transaction is stuck or taking too long
+            plugin.getLogger().warning("Lock acquisition timeout for " + player.getName());
+            return TransactionResult.failure("error.transaction_failed");
+        }
 
         try {
             // Validate amount
@@ -118,6 +137,7 @@ public class TransactionManager {
             double finalAmount = moneyAmount - tax; // Player receives less due to tax
 
             // Execute transaction on main thread (Bukkit API requirement)
+            // [SECURITY FIX: CRIT-01] Use .get() with timeout — prevents indefinite blocking
             return Bukkit.getScheduler().callSyncMethod(plugin, () -> {
                 try {
                     // === CRITICAL SECTION START ===
@@ -192,8 +212,12 @@ public class TransactionManager {
                     // Return failure
                     return TransactionResult.failure("error.transaction_failed");
                 }
-            }).get(); // Wait for result (blocks until sync task completes)
+            }).get(10, TimeUnit.SECONDS); // [SECURITY FIX: CRIT-01] Timeout: never block > 10 seconds
 
+        } catch (TimeoutException e) {
+            // [SECURITY FIX: CRIT-01] Main thread did not respond within 10 seconds
+            plugin.getLogger().severe("Transaction TIMEOUT for " + player.getName() + " — main thread unresponsive");
+            return TransactionResult.failure("error.transaction_failed");
         } catch (Exception e) {
             // Log async error
             plugin.getLogger().severe("Async transaction error: " + e.getMessage());
@@ -207,7 +231,7 @@ public class TransactionManager {
 
     /**
      * Executes a buy transaction (player buys emeralds from server).
-     * 
+     *
      * @param player The player
      * @param amount Emerald amount to buy
      * @return TransactionResult with success/failure and message
@@ -228,8 +252,19 @@ public class TransactionManager {
 
         // Get player's lock
         ReentrantLock lock = getLock(playerId);
-        // Acquire lock
-        lock.lock();
+        // [SECURITY FIX: CRIT-01] Acquire lock with timeout — prevents permanent blocking
+        boolean acquired;
+        try {
+            acquired = lock.tryLock(5, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return TransactionResult.failure("error.transaction_failed");
+        }
+        if (!acquired) {
+            // Lock timeout — another transaction is stuck or taking too long
+            plugin.getLogger().warning("Lock acquisition timeout for " + player.getName());
+            return TransactionResult.failure("error.transaction_failed");
+        }
 
         try {
             // Validate amount
@@ -257,6 +292,7 @@ public class TransactionManager {
             }
 
             // Execute transaction on main thread
+            // [SECURITY FIX: CRIT-01] Use .get() with timeout — prevents indefinite blocking
             return Bukkit.getScheduler().callSyncMethod(plugin, () -> {
                 try {
                     // === CRITICAL SECTION START ===
@@ -328,8 +364,12 @@ public class TransactionManager {
                     e.printStackTrace();
                     return TransactionResult.failure("error.transaction_failed");
                 }
-            }).get();
+            }).get(10, TimeUnit.SECONDS); // [SECURITY FIX: CRIT-01] Timeout: never block > 10 seconds
 
+        } catch (TimeoutException e) {
+            // [SECURITY FIX: CRIT-01] Main thread did not respond within 10 seconds
+            plugin.getLogger().severe("Transaction TIMEOUT for " + player.getName() + " — main thread unresponsive");
+            return TransactionResult.failure("error.transaction_failed");
         } catch (Exception e) {
             plugin.getLogger().severe("Async transaction error: " + e.getMessage());
             return TransactionResult.failure("error.transaction_failed");
@@ -340,28 +380,35 @@ public class TransactionManager {
 
     /**
      * Sells all emeralds in player's inventory.
-     * 
+     *
      * @param player The player
      * @return TransactionResult
      */
     public TransactionResult sellAllEmeralds(Player player) {
-        // Count emeralds in inventory
-        int emeraldCount = ItemUtils.countEmeralds(player.getInventory());
+        // [SECURITY FIX: HIGH-06] Count emeralds on main thread to avoid async inventory access
+        try {
+            int emeraldCount = Bukkit.getScheduler().callSyncMethod(plugin, () ->
+                    ItemUtils.countEmeralds(player.getInventory())
+            ).get(5, TimeUnit.SECONDS);
 
-        // Check if player has any emeralds
-        if (emeraldCount == 0) {
-            // No emeralds → return failure
-            return TransactionResult.failure("error.not_enough_emerald",
-                    Map.of("required", "1", "current", "0"));
+            // Check if player has any emeralds
+            if (emeraldCount == 0) {
+                // No emeralds → return failure
+                return TransactionResult.failure("error.not_enough_emerald",
+                        Map.of("required", "1", "current", "0"));
+            }
+
+            // Sell all emeralds
+            return sellEmerald(player, emeraldCount);
+        } catch (Exception e) {
+            plugin.getLogger().severe("sellAllEmeralds error for " + player.getName() + ": " + e.getMessage());
+            return TransactionResult.failure("error.transaction_failed");
         }
-
-        // Sell all emeralds
-        return sellEmerald(player, emeraldCount);
     }
 
     /**
      * Checks if player has passed cooldown.
-     * 
+     *
      * @param player The player
      * @return true if cooldown passed, false otherwise
      */
@@ -396,7 +443,7 @@ public class TransactionManager {
 
     /**
      * Checks if player has not exceeded rate limit.
-     * 
+     *
      * @param player The player
      * @return true if within limit, false if exceeded
      */
@@ -422,7 +469,7 @@ public class TransactionManager {
 
     /**
      * Records a transaction (updates cooldown and rate limit counter).
-     * 
+     *
      * @param player The player
      */
     private void recordTransaction(Player player) {
@@ -440,7 +487,7 @@ public class TransactionManager {
 
     /**
      * Gets remaining cooldown time for a player.
-     * 
+     *
      * @param player The player
      * @return Remaining cooldown in seconds, or 0 if no cooldown
      */
@@ -476,7 +523,7 @@ public class TransactionManager {
 
         /**
          * Checks if player can perform another transaction.
-         * 
+         *
          * @param maxPerMinute Maximum transactions per minute
          * @return true if can transact, false if limit exceeded
          */
@@ -514,7 +561,7 @@ public class TransactionManager {
 
         /**
          * Checks if this counter is expired (can be cleaned up).
-         * 
+         *
          * @return true if expired (older than 2 minutes)
          */
         boolean isExpired() {

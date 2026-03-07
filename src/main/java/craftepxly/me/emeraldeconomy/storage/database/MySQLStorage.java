@@ -18,7 +18,7 @@ import java.util.concurrent.Executors;
  * MySQLStorage — MySQL storage implementation with HikariCP connection pooling.
  */
 public class MySQLStorage implements IStorage {
-    
+
     // Reference to main plugin instance
     private final EmeraldEconomy plugin;
     // Database configuration (host, username, password, etc.)
@@ -29,10 +29,10 @@ public class MySQLStorage implements IStorage {
     private ExecutorService asyncExecutor;
     // Availability flag
     private boolean available = false;
-    
+
     /**
      * Constructs a new MySQLStorage.
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public MySQLStorage(EmeraldEconomy plugin) {
@@ -41,10 +41,10 @@ public class MySQLStorage implements IStorage {
         // Create database config (reads from config.yml)
         this.config = new DatabaseConfig(plugin);
     }
-    
+
     /**
      * Initializes MySQL storage (connection pool, tables, executor).
-     * 
+     *
      * @return CompletableFuture with true if successful, false otherwise
      */
     @Override
@@ -54,10 +54,10 @@ public class MySQLStorage implements IStorage {
             try {
                 // Setup HikariCP connection pool
                 setupHikariCP();
-                
+
                 // Create tables if they don't exist
                 createTables();
-                
+
                 // Setup async executor — named threads untuk debugging yang lebih mudah
                 // Setup async executor — named threads for easier debugging
                 // Read thread pool size from config (default 4)
@@ -69,15 +69,15 @@ public class MySQLStorage implements IStorage {
                     t.setDaemon(true);
                     return t;
                 });
-                
+
                 // Set available flag
                 available = true;
                 // Log success
                 plugin.getLogger().info("MySQL storage initialized successfully!");
                 plugin.getLogger().info("Connection pool: " + config.getMysqlPoolSize() + " connections");
-                
+
                 return true;
-                
+
             } catch (Exception e) {
                 // Log error
                 plugin.getLogger().severe("Failed to initialize MySQL storage: " + e.getMessage());
@@ -88,7 +88,7 @@ public class MySQLStorage implements IStorage {
             }
         });
     }
-    
+
     /**
      * Sets up HikariCP connection pool.
      * Configures pool size, timeouts, and performance optimizations.
@@ -96,14 +96,14 @@ public class MySQLStorage implements IStorage {
     private void setupHikariCP() {
         // Create HikariCP configuration
         HikariConfig hikariConfig = new HikariConfig();
-        
+
         // JDBC URL (e.g., "jdbc:mysql://localhost:3306/EmeraldEconomy?...")
         hikariConfig.setJdbcUrl(config.getMysqlJdbcUrl());
         // Database username
         hikariConfig.setUsername(config.getMysqlUsername());
         // Database password
         hikariConfig.setPassword(config.getMysqlPassword());
-        
+
         // Pool settings
         // Maximum number of connections in pool
         hikariConfig.setMaximumPoolSize(config.getMysqlPoolSize());
@@ -115,10 +115,10 @@ public class MySQLStorage implements IStorage {
         hikariConfig.setIdleTimeout(600000); // 10 minutes
         // Max connection lifetime (30 minutes default)
         hikariConfig.setMaxLifetime(plugin.getConfig().getLong("storage.mysql.max-lifetime", 1800000L));
-        
+
         // Connection test query (fast health check)
         hikariConfig.setConnectionTestQuery("SELECT 1");
-        
+
         // Performance tuning (prepared statement caching, etc.)
         hikariConfig.addDataSourceProperty("cachePrepStmts", "true");
         hikariConfig.addDataSourceProperty("prepStmtCacheSize", "250");
@@ -130,22 +130,23 @@ public class MySQLStorage implements IStorage {
         hikariConfig.addDataSourceProperty("cacheServerConfiguration", "true");
         hikariConfig.addDataSourceProperty("elideSetAutoCommits", "true");
         hikariConfig.addDataSourceProperty("maintainTimeStats", "false");
-        
+
         // Pool name (for monitoring)
         hikariConfig.setPoolName("EmeraldEconomy-MySQL-Pool");
-        
+
         // Create data source (connection pool)
         this.dataSource = new HikariDataSource(hikariConfig);
-        
-        // Log success
-        plugin.getLogger().info("HikariCP initialized: " + config.getMysqlJdbcUrl());
+
+        // [SECURITY FIX: LOW-06] Log only non-sensitive connection info (no JDBC URL with properties)
+        plugin.getLogger().info("HikariCP initialized: " + config.getMysqlHost() + ":" + config.getMysqlPort()
+                + "/" + config.getMysqlDatabase());
     }
-    
+
     /**
      * Buat tabel-tabel yang diperlukan kalau belum ada.
      * Pakai CREATE TABLE IF NOT EXISTS + CREATE INDEX IF NOT EXISTS
      * yang terpisah supaya kompatibel dengan MySQL dan MariaDB.
-     * 
+     *
      * Creates required tables if they don't exist.
      * Uses separate CREATE TABLE IF NOT EXISTS + CREATE INDEX IF NOT EXISTS
      * for compatibility with MySQL and MariaDB.
@@ -153,39 +154,40 @@ public class MySQLStorage implements IStorage {
     private void createTables() throws SQLException {
         // Tabel statistik player
         // Player statistics table
+        // [SECURITY FIX: CRIT-02] Changed total_converted from INT to BIGINT to prevent overflow
         String createPlayerStats =
-            "CREATE TABLE IF NOT EXISTS player_stats (" +
-            "  uuid VARCHAR(36) PRIMARY KEY," +          // Player UUID (primary key)
-            "  player_name VARCHAR(16) NOT NULL," +      // Player name
-            "  total_converted INT NOT NULL DEFAULT 0," + // Total emeralds converted
-            "  last_updated BIGINT NOT NULL" +           // Last update timestamp
-            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";   // InnoDB engine, UTF-8 charset
+                "CREATE TABLE IF NOT EXISTS player_stats (" +
+                        "  uuid VARCHAR(36) PRIMARY KEY," +              // Player UUID (primary key)
+                        "  player_name VARCHAR(16) NOT NULL," +          // Player name
+                        "  total_converted BIGINT NOT NULL DEFAULT 0," + // Total emeralds converted (BIGINT prevents overflow)
+                        "  last_updated BIGINT NOT NULL" +               // Last update timestamp
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";       // InnoDB engine, UTF-8 charset
 
         // Tabel log transaksi
         // Transaction log table
         String createTransactions =
-            "CREATE TABLE IF NOT EXISTS transactions_log (" +
-            "  id INT AUTO_INCREMENT PRIMARY KEY," +           // Auto-increment ID
-            "  uuid VARCHAR(36) NOT NULL," +                   // Player UUID
-            "  player_name VARCHAR(16) NOT NULL," +            // Player name
-            "  transaction_type ENUM('BUY','SELL') NOT NULL," + // Transaction type
-            "  emerald_amount INT NOT NULL," +                 // Emerald amount
-            "  money_amount DECIMAL(10,2) NOT NULL," +         // Money amount
-            "  price_at_time DECIMAL(10,2) NOT NULL," +        // Price at transaction time
-            "  transaction_id VARCHAR(32) NOT NULL UNIQUE," +  // Unique transaction ID
-            "  timestamp BIGINT NOT NULL" +                    // Transaction timestamp
-            ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";         // InnoDB engine, UTF-8 charset
+                "CREATE TABLE IF NOT EXISTS transactions_log (" +
+                        "  id INT AUTO_INCREMENT PRIMARY KEY," +           // Auto-increment ID
+                        "  uuid VARCHAR(36) NOT NULL," +                   // Player UUID
+                        "  player_name VARCHAR(16) NOT NULL," +            // Player name
+                        "  transaction_type ENUM('BUY','SELL') NOT NULL," + // Transaction type
+                        "  emerald_amount INT NOT NULL," +                 // Emerald amount
+                        "  money_amount DECIMAL(10,2) NOT NULL," +         // Money amount
+                        "  price_at_time DECIMAL(10,2) NOT NULL," +        // Price at transaction time
+                        "  transaction_id VARCHAR(32) NOT NULL UNIQUE," +  // Unique transaction ID
+                        "  timestamp BIGINT NOT NULL" +                    // Transaction timestamp
+                        ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";         // InnoDB engine, UTF-8 charset
 
         // Index dibuat terpisah dengan error-ignore supaya kompatibel
         // dengan MySQL 5.7 / MariaDB yang belum support CREATE INDEX IF NOT EXISTS
         // Indices created separately with error-ignore for compatibility
         // with MySQL 5.7 / MariaDB that don't support CREATE INDEX IF NOT EXISTS
         String[][] indices = {
-            {"idx_ps_name",    "CREATE INDEX idx_ps_name    ON player_stats (player_name)"},
-            {"idx_ps_updated", "CREATE INDEX idx_ps_updated ON player_stats (last_updated)"},
-            {"idx_tx_uuid",    "CREATE INDEX idx_tx_uuid    ON transactions_log (uuid)"},
-            {"idx_tx_ts",      "CREATE INDEX idx_tx_ts      ON transactions_log (timestamp)"},
-            {"idx_tx_type_ts", "CREATE INDEX idx_tx_type_ts ON transactions_log (transaction_type, timestamp)"}
+                {"idx_ps_name",    "CREATE INDEX idx_ps_name    ON player_stats (player_name)"},
+                {"idx_ps_updated", "CREATE INDEX idx_ps_updated ON player_stats (last_updated)"},
+                {"idx_tx_uuid",    "CREATE INDEX idx_tx_uuid    ON transactions_log (uuid)"},
+                {"idx_tx_ts",      "CREATE INDEX idx_tx_ts      ON transactions_log (timestamp)"},
+                {"idx_tx_type_ts", "CREATE INDEX idx_tx_type_ts ON transactions_log (transaction_type, timestamp)"}
         };
 
         // Get connection from pool
@@ -221,10 +223,10 @@ public class MySQLStorage implements IStorage {
             throw e;
         }
     }
-    
+
     /**
      * Gets player statistics by UUID.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with PlayerStats, or null if not found
      */
@@ -234,23 +236,23 @@ public class MySQLStorage implements IStorage {
         return CompletableFuture.supplyAsync(() -> {
             // SQL query to select player stats
             String sql = "SELECT * FROM player_stats WHERE uuid = ?";
-            
+
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                
+
                 // Set UUID parameter (prevents SQL injection)
                 stmt.setString(1, uuid.toString());
-                
+
                 // Execute query
                 try (ResultSet rs = stmt.executeQuery()) {
                     // Check if result exists
                     if (rs.next()) {
-                        // Create and return PlayerStats object
+                        // [SECURITY FIX: CRIT-02] Use getLong instead of getInt for total_converted
                         return new PlayerStats(
-                            UUID.fromString(rs.getString("uuid")),
-                            rs.getString("player_name"),
-                            rs.getInt("total_converted"),
-                            rs.getLong("last_updated")
+                                UUID.fromString(rs.getString("uuid")),
+                                rs.getString("player_name"),
+                                rs.getLong("total_converted"),
+                                rs.getLong("last_updated")
                         );
                     }
                 }
@@ -258,15 +260,15 @@ public class MySQLStorage implements IStorage {
                 // Log error
                 plugin.getLogger().severe("MySQL error getting player stats: " + e.getMessage());
             }
-            
+
             // Player not found → return null
             return null;
         }, asyncExecutor);
     }
-    
+
     /**
      * Saves player statistics (insert or update).
-     * 
+     *
      * @param stats PlayerStats to save
      * @return CompletableFuture that completes when save is done
      */
@@ -283,29 +285,30 @@ public class MySQLStorage implements IStorage {
                     total_converted = VALUES(total_converted),
                     last_updated = VALUES(last_updated)
                 """;
-            
+
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                
+
                 // Set parameters
                 stmt.setString(1, stats.getUuid().toString());
                 stmt.setString(2, stats.getPlayerName());
-                stmt.setInt(3, stats.getTotalConverted());
+                // [SECURITY FIX: CRIT-02] Use setLong instead of setInt for total_converted
+                stmt.setLong(3, stats.getTotalConverted());
                 stmt.setLong(4, stats.getLastUpdated());
-                
+
                 // Execute update
                 stmt.executeUpdate();
-                
+
             } catch (SQLException e) {
                 // Log error
                 plugin.getLogger().severe("MySQL error saving player stats: " + e.getMessage());
             }
         }, asyncExecutor);
     }
-    
+
     /**
      * Increments player's total converted amount.
-     * 
+     *
      * @param uuid       Player UUID
      * @param playerName Player name
      * @param amount     Amount to add
@@ -323,29 +326,30 @@ public class MySQLStorage implements IStorage {
                     total_converted = total_converted + VALUES(total_converted),
                     last_updated = VALUES(last_updated)
                 """;
-            
+
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                
+
                 // Set parameters
                 stmt.setString(1, uuid.toString());
                 stmt.setString(2, playerName);
-                stmt.setInt(3, amount);
+                // [SECURITY FIX: CRIT-02] Use setLong to match BIGINT column type
+                stmt.setLong(3, (long) amount);
                 stmt.setLong(4, System.currentTimeMillis());
-                
+
                 // Execute update
                 stmt.executeUpdate();
-                
+
             } catch (SQLException e) {
                 // Log error
                 plugin.getLogger().severe("MySQL error incrementing converted: " + e.getMessage());
             }
         }, asyncExecutor);
     }
-    
+
     /**
      * Logs a transaction to database.
-     * 
+     *
      * @param transaction Transaction to log
      * @return CompletableFuture that completes when logging is done
      */
@@ -360,10 +364,10 @@ public class MySQLStorage implements IStorage {
                  price_at_time, transaction_id, timestamp)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """;
-            
+
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                
+
                 // Set parameters
                 stmt.setString(1, transaction.getPlayerUuid().toString());
                 stmt.setString(2, transaction.getPlayerName());
@@ -373,20 +377,20 @@ public class MySQLStorage implements IStorage {
                 stmt.setDouble(6, transaction.getPriceAtTime());
                 stmt.setString(7, transaction.getTransactionId());
                 stmt.setLong(8, transaction.getTimestamp().toEpochMilli());
-                
+
                 // Execute insert
                 stmt.executeUpdate();
-                
+
             } catch (SQLException e) {
                 // Log error
                 plugin.getLogger().severe("MySQL error logging transaction: " + e.getMessage());
             }
         }, asyncExecutor);
     }
-    
+
     /**
      * Gets total emeralds converted by a player.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with total converted, or 0 if not found
      */
@@ -396,34 +400,35 @@ public class MySQLStorage implements IStorage {
         return CompletableFuture.supplyAsync(() -> {
             // SQL query
             String sql = "SELECT total_converted FROM player_stats WHERE uuid = ?";
-            
+
             try (Connection conn = dataSource.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(sql)) {
-                
+
                 // Set UUID parameter
                 stmt.setString(1, uuid.toString());
-                
+
                 // Execute query
                 try (ResultSet rs = stmt.executeQuery()) {
                     // Check if result exists
                     if (rs.next()) {
-                        // Return total_converted
-                        return rs.getInt("total_converted");
+                        // [SECURITY FIX: CRIT-02] Use getLong and clamp to int range for interface compatibility
+                        long value = rs.getLong("total_converted");
+                        return (int) Math.min(value, Integer.MAX_VALUE);
                     }
                 }
             } catch (SQLException e) {
                 // Log error
                 plugin.getLogger().severe("MySQL error getting total converted: " + e.getMessage());
             }
-            
+
             // Not found → return 0
             return 0;
         }, asyncExecutor);
     }
-    
+
     /**
      * Closes MySQL storage (shuts down pool and executor).
-     * 
+     *
      * @return CompletableFuture that completes when shutdown is done
      */
     @Override
@@ -465,10 +470,10 @@ public class MySQLStorage implements IStorage {
             }
         });
     }
-    
+
     /**
      * Checks if MySQL storage is available.
-     * 
+     *
      * @return true if available, false otherwise
      */
     @Override
@@ -476,20 +481,20 @@ public class MySQLStorage implements IStorage {
         // Return true if available flag is set AND data source is not closed
         return available && dataSource != null && !dataSource.isClosed();
     }
-    
+
     /**
      * Gets storage type.
-     * 
+     *
      * @return MYSQL
      */
     @Override
     public StorageType getStorageType() {
         return StorageType.MYSQL;
     }
-    
+
     /**
      * Saves all data (no-op for MySQL, auto-saves).
-     * 
+     *
      * @return CompletableFuture (completes immediately)
      */
     @Override

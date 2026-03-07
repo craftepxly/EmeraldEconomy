@@ -15,23 +15,23 @@ import java.util.logging.Level;
  * ActionExecutor — executes actions defined in menu.yml.
  */
 public class ActionExecutor {
-    
+
     // Reference to main plugin instance
     private final EmeraldEconomy plugin;
-    
+
     /**
      * Constructs a new ActionExecutor.
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public ActionExecutor(EmeraldEconomy plugin) {
         // Store plugin reference
         this.plugin = plugin;
     }
-    
+
     /**
      * Executes a list of actions for a player.
-     * 
+     *
      * @param player  The player who triggered the actions
      * @param actions List of action strings from menu.yml
      */
@@ -42,20 +42,20 @@ public class ActionExecutor {
             executeAction(player, action);
         }
     }
-    
+
     /**
      * Executes a single action for a player.
-     * 
+     *
      * @param player The player
      * @param action The action string (e.g., "[console] give {player} diamond 1")
      */
     private void executeAction(Player player, String action) {
         // Remove leading/trailing whitespace
         action = action.trim();
-        
+
         // Skip empty actions
         if (action.isEmpty()) return;
-        
+
         try {
             // Parse action type (format: [type] value)
             // Check if action starts with [ and contains ]
@@ -66,48 +66,48 @@ public class ActionExecutor {
                 String type = action.substring(1, endBracket).toLowerCase();
                 // Extract the action value (everything after the closing bracket)
                 String value = action.substring(endBracket + 1);
-                
+
                 // Route to the appropriate handler based on type
                 switch (type) {
                     case "console":
                         // Run command as console
                         executeConsoleCommand(player, value);
                         break;
-                        
+
                     case "player":
                         // Run command as player
                         executePlayerCommand(player, value);
                         break;
-                        
+
                     case "message":
                         // Send message to player
                         sendMessage(player, value);
                         break;
-                        
+
                     case "sound":
                         // Play sound to player
                         playSound(player, value);
                         break;
-                        
+
                     case "close":
                         // Close player's inventory
                         closeMenu(player);
                         break;
-                        
+
                     case "refresh":
                         // Refresh the current menu
                         refreshMenu(player);
                         break;
-                        
+
                     case "async":
                         // Execute async action (buy/sell transactions)
                         executeAsyncAction(player, value);
                         break;
-                        
+
                     case "requirement":
                         // Requirements are checked elsewhere (not an action)
                         break;
-                        
+
                     default:
                         // Unknown action type → log warning
                         plugin.getLogger().warning("Unknown action type: " + type);
@@ -118,29 +118,38 @@ public class ActionExecutor {
             plugin.getLogger().log(Level.SEVERE, "Error executing action: " + action, e);
         }
     }
-    
+
     /**
      * Executes a command as console.
-     * 
+     *
      * @param player  The player (for {player} placeholder)
      * @param command The command to execute
      */
+    // [SECURITY FIX: LOW-07] Defense-in-depth: validate player name before console command injection
+    // Allows: letters, digits, underscore, period (Geyser prefix), asterisk (Geyser prefix)
+    private static final java.util.regex.Pattern SAFE_NAME =
+            java.util.regex.Pattern.compile("^[a-zA-Z0-9_.*]{1,32}$");
+
     private void executeConsoleCommand(Player player, String command) {
-        // Replace {player} placeholder with player's name
-        command = command.replace("{player}", player.getName());
-        // Store final command in a final variable (required for lambda)
+        String name = player.getName();
+
+        // [SECURITY FIX: LOW-07] Reject names with unusual characters (defense-in-depth)
+        if (!SAFE_NAME.matcher(name).matches()) {
+            plugin.getLogger().warning("[Security] Skipped console cmd — unusual player name: "
+                    + name.replaceAll("[^a-zA-Z0-9_.]", "?"));
+            return;
+        }
+
+        command = command.replace("{player}", name);
         String finalCommand = command;
-        
-        // Execute command on main thread (Bukkit requirement)
         Bukkit.getScheduler().runTask(plugin, () -> {
-            // Dispatch command as console
             Bukkit.dispatchCommand(Bukkit.getConsoleSender(), finalCommand);
         });
     }
-    
+
     /**
      * Executes a command as the player.
-     * 
+     *
      * @param player  The player
      * @param command The command to execute
      */
@@ -151,10 +160,10 @@ public class ActionExecutor {
             player.performCommand(command);
         });
     }
-    
+
     /**
      * Sends a message to the player.
-     * 
+     *
      * @param player  The player
      * @param message The message to send
      */
@@ -163,17 +172,17 @@ public class ActionExecutor {
         message = message.replace("&", "§");
         // Store in final variable for lambda
         String finalMessage = message;
-        
+
         // Send message on main thread
         Bukkit.getScheduler().runTask(plugin, () -> {
             // Send raw message to player
             plugin.getMessageManager().sendRaw(player, finalMessage);
         });
     }
-    
+
     /**
      * Plays a sound to the player.
-     * 
+     *
      * @param player      The player
      * @param soundConfig Sound configuration (format: "SOUND:volume:pitch")
      */
@@ -187,7 +196,7 @@ public class ActionExecutor {
             float volume = parts.length > 1 ? Float.parseFloat(parts[1]) : 1.0f;
             // Parse pitch (default 1.0 if not provided)
             float pitch = parts.length > 2 ? Float.parseFloat(parts[2]) : 1.0f;
-            
+
             // Play sound on main thread
             Bukkit.getScheduler().runTask(plugin, () -> {
                 // Play sound at player's location
@@ -198,10 +207,10 @@ public class ActionExecutor {
             plugin.getLogger().warning("Invalid sound configuration: " + soundConfig);
         }
     }
-    
+
     /**
      * Closes the player's inventory.
-     * 
+     *
      * @param player The player
      */
     private void closeMenu(Player player) {
@@ -211,10 +220,10 @@ public class ActionExecutor {
             player.closeInventory();
         });
     }
-    
+
     /**
      * Refreshes the player's current menu.
-     * 
+     *
      * @param player The player
      */
     private void refreshMenu(Player player) {
@@ -227,10 +236,10 @@ public class ActionExecutor {
             }
         });
     }
-    
+
     /**
      * Executes custom async actions (buy/sell transactions).
-     * 
+     *
      * @param player      The player
      * @param actionValue The action value (e.g., "convert_sell:64")
      */
@@ -274,17 +283,17 @@ public class ActionExecutor {
             handleCustomAmountBuy(player);
         }
     }
-    
+
     /**
      * Handles selling a specific amount of emeralds.
-     * 
+     *
      * @param player The player
      * @param amount The amount to sell
      */
     private void handleConvertSell(Player player, int amount) {
         // Execute sell transaction via TransactionManager
         TransactionResult result = plugin.getTransactionManager().sellEmerald(player, amount);
-        
+
         // Send result message on main thread
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (result.isSuccess()) {
@@ -296,16 +305,16 @@ public class ActionExecutor {
             }
         });
     }
-    
+
     /**
      * Handles selling all emeralds in player's inventory.
-     * 
+     *
      * @param player The player
      */
     private void handleConvertSellAll(Player player) {
         // Execute sell-all transaction via TransactionManager
         TransactionResult result = plugin.getTransactionManager().sellAllEmeralds(player);
-        
+
         // Send result message on main thread
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (result.isSuccess()) {
@@ -318,17 +327,17 @@ public class ActionExecutor {
             }
         });
     }
-    
+
     /**
      * Handles buying a specific amount of emeralds.
-     * 
+     *
      * @param player The player
      * @param amount The amount to buy
      */
     private void handleConvertBuy(Player player, int amount) {
         // Execute buy transaction via TransactionManager
         TransactionResult result = plugin.getTransactionManager().buyEmerald(player, amount);
-        
+
         // Send result message on main thread
         Bukkit.getScheduler().runTask(plugin, () -> {
             if (result.isSuccess()) {
@@ -340,56 +349,65 @@ public class ActionExecutor {
             }
         });
     }
-    
+
     /**
      * Fills player's inventory with emeralds (up to available space).
-     * 
+     *
      * @param player The player
      */
     private void handleConvertBuyInventory(Player player) {
-        // Initialize free space counter
-        int freeSpace = 0;
-        
-        // Calculate free space for emeralds
-        for (ItemStack item : player.getInventory().getStorageContents()) {
-            // Check if slot is empty or air
-            if (item == null || item.getType() == Material.AIR) {
-                // Empty slot = 64 emeralds
-                freeSpace += 64;
-            } else if (item.getType() == Material.EMERALD) {
-                // Partial emerald stack = remaining space
-                freeSpace += Math.max(0, 64 - item.getAmount());
-            }
-        }
-        
-        // Check if there's any space
-        if (freeSpace <= 0) {
-            // No space → send inventory full error on main thread
-            Bukkit.getScheduler().runTask(plugin, () -> {
-                plugin.getMessageManager().send(player, "error.inventory_full");
-            });
-            return;
-        }
-        
-        // Try to buy as many as possible (up to free space)
-        TransactionResult result = plugin.getTransactionManager().buyEmerald(player, freeSpace);
-        
-        // Send result message on main thread
+        // [SECURITY FIX: HIGH-06/MED-02] Calculate free space on MAIN THREAD to prevent
+        // async inventory access (ConcurrentModificationException) and TOCTOU race condition
         Bukkit.getScheduler().runTask(plugin, () -> {
-            if (result.isSuccess()) {
-                // Success → send success message
-                plugin.getMessageManager().send(player, result.getMessageKey(), result.getPlaceholders());
-            } else {
-                // Failure → send error message
-                plugin.getMessageManager().send(player, result.getMessageKey(), result.getPlaceholders());
+            // Initialize free space counter
+            int freeSpace = 0;
+
+            // Calculate free space for emeralds (now on main thread — thread-safe)
+            for (ItemStack item : player.getInventory().getStorageContents()) {
+                // Check if slot is empty or air
+                if (item == null || item.getType() == Material.AIR) {
+                    // Empty slot = 64 emeralds
+                    freeSpace += 64;
+                } else if (item.getType() == Material.EMERALD) {
+                    // Partial emerald stack = remaining space
+                    freeSpace += Math.max(0, 64 - item.getAmount());
+                }
             }
+
+            // Check if there's any space
+            if (freeSpace <= 0) {
+                // No space → send inventory full error
+                plugin.getMessageManager().send(player, "error.inventory_full");
+                return;
+            }
+
+            // Capture final value for async lambda
+            final int space = freeSpace;
+
+            // [SECURITY FIX: HIGH-06] Execute buy transaction on async thread AFTER
+            // free space was calculated safely on main thread
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                // Try to buy as many as possible (up to free space)
+                TransactionResult result = plugin.getTransactionManager().buyEmerald(player, space);
+
+                // Send result message on main thread
+                Bukkit.getScheduler().runTask(plugin, () -> {
+                    if (result.isSuccess()) {
+                        // Success → send success message
+                        plugin.getMessageManager().send(player, result.getMessageKey(), result.getPlaceholders());
+                    } else {
+                        // Failure → send error message
+                        plugin.getMessageManager().send(player, result.getMessageKey(), result.getPlaceholders());
+                    }
+                });
+            });
         });
     }
-    
+
     /**
      * Starts a custom amount input session for selling.
      * Closes the inventory and prompts player to type amount in chat.
-     * 
+     *
      * @param player The player
      */
     private void handleCustomAmountSell(Player player) {
@@ -401,16 +419,16 @@ public class ActionExecutor {
             craftepxly.me.emeraldeconomy.listener.ChatListener chatListener = plugin.getChatListener();
             if (chatListener != null) {
                 // Start custom amount session for SELL
-                chatListener.startCustomAmountSession(player, 
-                    craftepxly.me.emeraldeconomy.listener.ChatListener.CustomAmountType.SELL);
+                chatListener.startCustomAmountSession(player,
+                        craftepxly.me.emeraldeconomy.listener.ChatListener.CustomAmountType.SELL);
             }
         });
     }
-    
+
     /**
      * Starts a custom amount input session for buying.
      * Closes the inventory and prompts player to type amount in chat.
-     * 
+     *
      * @param player The player
      */
     private void handleCustomAmountBuy(Player player) {
@@ -422,8 +440,8 @@ public class ActionExecutor {
             craftepxly.me.emeraldeconomy.listener.ChatListener chatListener = plugin.getChatListener();
             if (chatListener != null) {
                 // Start custom amount session for BUY
-                chatListener.startCustomAmountSession(player, 
-                    craftepxly.me.emeraldeconomy.listener.ChatListener.CustomAmountType.BUY);
+                chatListener.startCustomAmountSession(player,
+                        craftepxly.me.emeraldeconomy.listener.ChatListener.CustomAmountType.BUY);
             }
         });
     }

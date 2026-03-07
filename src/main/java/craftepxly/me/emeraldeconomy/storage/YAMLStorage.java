@@ -38,9 +38,9 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Buat YAMLStorage dengan nama file default (player_stats.yml).
-     * 
+     *
      * Creates YAMLStorage with default file name (player_stats.yml).
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public YAMLStorage(EmeraldEconomy plugin) {
@@ -51,23 +51,39 @@ public class YAMLStorage implements IStorage {
     /**
      * Buat YAMLStorage dengan nama file custom.
      * Dipakai misalnya buat emergency_cache.yml saat MySQL down.
-     * 
+     *
      * Creates YAMLStorage with custom file name.
      * Used for example for emergency_cache.yml when MySQL is down.
-     * 
+     *
      * @param plugin   The main EmeraldEconomy plugin instance
      * @param fileName Custom file name
      */
     public YAMLStorage(EmeraldEconomy plugin, String fileName) {
         // Store plugin reference
         this.plugin = plugin;
+        // [SECURITY FIX: LOW-04] Block path traversal characters in file name
+        if (fileName == null || fileName.contains("..") || fileName.contains("/")
+                || fileName.contains("\\") || fileName.contains("\0")) {
+            plugin.getLogger().warning("[Security] Blocked path traversal in fileName: " + fileName + ". Using default.");
+            fileName = "player_stats.yml";
+        }
         // Create File object for data file
-        this.dataFile = new File(plugin.getDataFolder(), fileName);
+        File candidate = new File(plugin.getDataFolder(), fileName);
+        // [SECURITY FIX: LOW-04] Verify canonical path stays inside plugin data folder
+        try {
+            if (!candidate.getCanonicalPath().startsWith(plugin.getDataFolder().getCanonicalPath())) {
+                plugin.getLogger().warning("[Security] Path escapes plugin dir: " + candidate.getPath() + ". Using default.");
+                candidate = new File(plugin.getDataFolder(), "player_stats.yml");
+            }
+        } catch (IOException e) {
+            candidate = new File(plugin.getDataFolder(), "player_stats.yml");
+        }
+        this.dataFile = candidate;
     }
 
     /**
      * Initializes YAML storage (creates file, loads data, starts executor).
-     * 
+     *
      * @return CompletableFuture with true if successful, false otherwise
      */
     @Override
@@ -132,12 +148,12 @@ public class YAMLStorage implements IStorage {
                 // Support both new-format and legacy-format keys
                 // Get name (try ".name", fallback to ".player_name", default "Unknown")
                 String name = data.getString(key + ".name", data.getString(key + ".player_name", "Unknown"));
-                // Get total (try ".total", fallback to ".total_converted", default 0)
-                int total = data.getInt(key + ".total",
-                    data.getInt(key + ".total_converted", 0));
+                // [SECURITY FIX: CRIT-02] Use getLong instead of getInt for total_converted to prevent overflow
+                long total = data.getLong(key + ".total",
+                        data.getLong(key + ".total_converted", 0));
                 // Get updated timestamp (try ".updated", fallback to ".last_transaction", default now)
                 long updated = data.getLong(key + ".updated",
-                    data.getLong(key + ".last_transaction", System.currentTimeMillis()));
+                        data.getLong(key + ".last_transaction", System.currentTimeMillis()));
 
                 // Create PlayerStats and add to cache
                 cache.put(uuid, new PlayerStats(uuid, name, total, updated));
@@ -151,7 +167,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Gets player statistics by UUID.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with PlayerStats, or null if not found
      */
@@ -163,7 +179,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Saves player statistics.
-     * 
+     *
      * @param stats PlayerStats to save
      * @return CompletableFuture that completes when save is done
      */
@@ -182,7 +198,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Increments player's total converted amount.
-     * 
+     *
      * @param uuid       Player UUID
      * @param playerName Player name
      * @param amount     Amount to add
@@ -194,7 +210,7 @@ public class YAMLStorage implements IStorage {
         return CompletableFuture.runAsync(() -> {
             // Get existing stats or create new entry
             PlayerStats stats = cache.computeIfAbsent(uuid,
-                k -> new PlayerStats(k, playerName, 0, System.currentTimeMillis()));
+                    k -> new PlayerStats(k, playerName, 0, System.currentTimeMillis()));
 
             // Increment converted amount
             stats.addConverted(amount);
@@ -209,7 +225,7 @@ public class YAMLStorage implements IStorage {
      * Logs a transaction.
      * YAML backend does not persist transactions to this file;
      * file-based transaction logging is handled by TransactionLogger.
-     * 
+     *
      * @param transaction Transaction to log
      * @return CompletableFuture (completes immediately)
      */
@@ -222,7 +238,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Gets total emeralds converted by a player.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with total converted, or 0 if not found
      */
@@ -230,13 +246,15 @@ public class YAMLStorage implements IStorage {
     public CompletableFuture<Integer> getTotalConverted(UUID uuid) {
         // Get from cache
         PlayerStats stats = cache.get(uuid);
-        // Return total (or 0 if null)
-        return CompletableFuture.completedFuture(stats != null ? stats.getTotalConverted() : 0);
+        // [SECURITY FIX: CRIT-02] Clamp long to int range for interface compatibility
+        return CompletableFuture.completedFuture(
+                stats != null ? (int) Math.min(stats.getTotalConverted(), Integer.MAX_VALUE) : 0
+        );
     }
 
     /**
      * Saves all cached data to disk.
-     * 
+     *
      * @return CompletableFuture that completes when save is done
      */
     @Override
@@ -256,7 +274,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Closes YAML storage (flushes data and shuts down executor).
-     * 
+     *
      * @return CompletableFuture that completes when shutdown is done
      */
     @Override
@@ -307,7 +325,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Checks if storage is available.
-     * 
+     *
      * @return true if available, false otherwise
      */
     @Override
@@ -317,7 +335,7 @@ public class YAMLStorage implements IStorage {
 
     /**
      * Gets storage type.
-     * 
+     *
      * @return YAML
      */
     @Override
@@ -340,7 +358,7 @@ public class YAMLStorage implements IStorage {
         String path = stats.getUuid().toString();
         // Set name in YAML
         data.set(path + ".name", stats.getPlayerName());
-        // Set total in YAML
+        // [SECURITY FIX: CRIT-02] Store as long — YAML handles long natively
         data.set(path + ".total", stats.getTotalConverted());
         // Set updated timestamp in YAML
         data.set(path + ".updated", stats.getLastUpdated());

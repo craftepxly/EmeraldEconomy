@@ -18,11 +18,11 @@ import java.util.logging.Level;
  * TransactionLogger — logs all transactions to a flat file (transactions.log).
  */
 public class TransactionLogger {
-    
+
     // Reference to main plugin instance
     private final EmeraldEconomy plugin;
     // File object for transactions.log
-    private final File logFile;
+    private File logFile;
     // Thread-safe queue for transactions waiting to be written
     private final BlockingQueue<Transaction> logQueue;
     // Background thread that writes transactions from queue to file
@@ -31,21 +31,29 @@ public class TransactionLogger {
     private volatile boolean running = true;
     // PrintWriter for writing to file
     private PrintWriter writer;
-    
+
+    // [SECURITY FIX: MED-07] Maximum log file size before rotation (50 MB)
+    private static final long MAX_LOG_SIZE = 50L * 1024L * 1024L;
+
     /**
      * Constructs a new TransactionLogger and starts background thread.
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public TransactionLogger(EmeraldEconomy plugin) {
         // Store plugin reference
         this.plugin = plugin;
         // Create File object for transactions.log (path from config)
-        this.logFile = new File(plugin.getDataFolder(), 
-            plugin.getConfig().getString("transaction.log_file", "transactions.log"));
+        String logFileName = plugin.getConfig().getString("transaction.log_file", "transactions.log");
+        // [SECURITY FIX: LOW-02] Block path traversal characters in log file name
+        if (logFileName.contains("..") || logFileName.contains("/") || logFileName.contains("\\")) {
+            plugin.getLogger().warning("Invalid log file name: " + logFileName + ". Using default.");
+            logFileName = "transactions.log";
+        }
+        this.logFile = new File(plugin.getDataFolder(), logFileName);
         // Create unbounded blocking queue (thread-safe)
         this.logQueue = new LinkedBlockingQueue<>();
-        
+
         // Initialize log file
         try {
             // Check if file exists
@@ -63,13 +71,13 @@ public class TransactionLogger {
             // Log error if file initialization fails
             plugin.getLogger().log(Level.SEVERE, "Failed to initialize transaction logger", e);
         }
-        
+
         // Start logging thread (daemon thread)
         this.loggerThread = new Thread(this::processQueue, "EmeraldEconomy-Logger");
         this.loggerThread.setDaemon(true); // Thread dies when server stops
         this.loggerThread.start();
     }
-    
+
     /**
      * Writes header to log file if file is empty.
      */
@@ -85,10 +93,10 @@ public class TransactionLogger {
             writer.flush();
         }
     }
-    
+
     /**
      * Logs a transaction (queues it for async writing).
-     * 
+     *
      * @param transaction Transaction to log
      */
     public void log(Transaction transaction) {
@@ -105,7 +113,7 @@ public class TransactionLogger {
             plugin.getLogger().info("Transaction: " + transaction);
         }
     }
-    
+
     /**
      * Background thread that processes the log queue.
      * Runs continuously until logger is closed.
@@ -128,7 +136,7 @@ public class TransactionLogger {
                 plugin.getLogger().log(Level.SEVERE, "Error writing transaction log", e);
             }
         }
-        
+
         // Process remaining items before shutdown
         Transaction transaction;
         // Drain queue (poll returns null when empty)
@@ -142,29 +150,66 @@ public class TransactionLogger {
             }
         }
     }
-    
+
     /**
      * Writes a transaction to the log file.
-     * 
+     *
      * @param transaction Transaction to write
      */
     private void writeTransaction(Transaction transaction) {
         // Check if writer exists
         if (writer != null) {
+            // [SECURITY FIX: MED-07] Check file size before writing — rotate if exceeded
+            if (logFile.length() > MAX_LOG_SIZE) {
+                rotateLog();
+            }
             // Write transaction string (calls transaction.toString())
             writer.println(transaction.toString());
             // Flush to disk immediately (ensures data is written)
             writer.flush();
         }
     }
-    
+
+    /**
+     * Rotates the log file when it exceeds MAX_LOG_SIZE.
+     * Renames current file to .old.log and creates a new empty log file.
+     */
+    private void rotateLog() {
+        try {
+            // Flush and close current writer
+            writer.flush();
+            writer.close();
+            // Create rotated file name (transactions.old.log)
+            File rotated = new File(logFile.getParent(),
+                    logFile.getName().replace(".log", ".old.log"));
+            // Delete old rotated file if exists
+            if (rotated.exists()) {
+                rotated.delete();
+            }
+            // Rename current log to .old.log
+            logFile.renameTo(rotated);
+            // Create new empty log file
+            logFile = new File(logFile.getParent(), logFile.getName().replace(".old.log", ".log"));
+            logFile.createNewFile();
+            // Open new writer
+            writer = new PrintWriter(new BufferedWriter(new FileWriter(logFile, true)));
+            // Write header to new file
+            writeHeader();
+            // Log rotation event
+            plugin.getLogger().info("Transaction log rotated (exceeded " + (MAX_LOG_SIZE / 1024 / 1024) + "MB)");
+        } catch (IOException e) {
+            // Log error if rotation fails
+            plugin.getLogger().log(Level.SEVERE, "Failed to rotate transaction log", e);
+        }
+    }
+
     /**
      * Closes the transaction logger and flushes remaining queue.
      */
     public void close() {
         // Set running flag to false (signals thread to stop)
         running = false;
-        
+
         // Check if logger thread exists
         if (loggerThread != null) {
             // Interrupt thread (wakes it up from blocking take())
@@ -177,7 +222,7 @@ public class TransactionLogger {
                 plugin.getLogger().warning("Transaction logger thread did not terminate cleanly");
             }
         }
-        
+
         // Check if writer exists
         if (writer != null) {
             // Flush any buffered data
@@ -186,10 +231,10 @@ public class TransactionLogger {
             writer.close();
         }
     }
-    
+
     /**
      * Gets the log file.
-     * 
+     *
      * @return File object for transactions.log
      */
     public File getLogFile() {

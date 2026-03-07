@@ -32,8 +32,6 @@ public class EmeraldEconomy extends JavaPlugin {
     // Singleton instance (accessible via getInstance())
     private static EmeraldEconomy instance;
 
-    // ===== Core Managers =====
-    
     /** Handles all configuration file operations */
     // Manages config.yml and menu.yml
     private ConfigManager configManager;
@@ -70,8 +68,6 @@ public class EmeraldEconomy extends JavaPlugin {
     // Handles custom amount input via chat
     private ChatListener chatListener;
 
-    // ===== Feature Flags =====
-    
     /** Whether PlaceholderAPI is enabled and hooked */
     // True if PlaceholderAPI is present and registered
     private boolean placeholderAPIEnabled = false;
@@ -381,8 +377,6 @@ public class EmeraldEconomy extends JavaPlugin {
         getLogger().info("");
     }
 
-    // ===== Getters for Managers =====
-
     /**
      * Gets the singleton instance of the plugin.
      * 
@@ -483,8 +477,6 @@ public class EmeraldEconomy extends JavaPlugin {
     public ChatListener getChatListener() {
         return chatListener;
     }
-
-    // ===== Feature Flag Getters =====
 
     /**
      * Checks if PlaceholderAPI is enabled.

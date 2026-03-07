@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "craftepxly.me"
-version = "3.3.0"
+version = "3.4.0"
 
 java {
     toolchain {
@@ -50,7 +50,7 @@ tasks {
     
     jar {
         archiveBaseName.set("EmeraldEconomy")
-        archiveVersion.set("3.3.0")
+        archiveVersion.set("3.4.0")
     }
     
     test {

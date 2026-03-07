@@ -20,23 +20,23 @@ import java.util.stream.Collectors;
  * AdminCommand — the command executor for /ecadmin.
  */
 public class AdminCommand implements CommandExecutor, TabCompleter {
-    
+
     // This field holds a reference to the main plugin instance so we can access managers
     private final EmeraldEconomy plugin;
-    
+
     /**
      * Constructs a new AdminCommand with a reference to the plugin.
-     * 
+     *
      * @param plugin The main EmeraldEconomy plugin instance
      */
     public AdminCommand(EmeraldEconomy plugin) {
         // Store plugin reference in memory so we can call getConfigManager(), getMessageManager(), etc.
         this.plugin = plugin;
     }
-    
+
     /**
      * Executes the /ecadmin command and its subcommands.
-     * 
+     *
      * @param sender  The entity that sent the command (Player or Console)
      * @param command The command object (not used here, but required by Bukkit API)
      * @param label   The command alias used (e.g., "ecadmin")
@@ -45,7 +45,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
      */
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command,
-                           @NotNull String label, @NotNull String[] args) {
+                             @NotNull String label, @NotNull String[] args) {
         // Check if the sender has the admin permission node
         if (!sender.hasPermission("emeraldeconomy.admin")) {
             // They don't have permission → send error message from messages.yml
@@ -53,62 +53,62 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             // Return true = command was handled (don't show "Unknown command")
             return true;
         }
-        
+
         // If no arguments were provided (just "/ecadmin"), show help
         if (args.length == 0) {
             sendHelp(sender);
             return true;
         }
-        
+
         // Convert the first argument to lowercase so "RELOAD" and "reload" are treated the same
         String subCommand = args[0].toLowerCase();
-        
+
         // Use a switch statement to route to the correct handler method
         switch (subCommand) {
             case "reload":
                 // User typed "/ecadmin reload" → reload all config files
                 handleReload(sender);
                 break;
-                
+
             case "stats":
                 // User typed "/ecadmin stats [player]" → show player statistics
                 handleStats(sender, args);
                 break;
-                
+
             case "setprice":
                 // User typed "/ecadmin setprice buy|sell price" → change price in config
                 handleSetPrice(sender, args);
                 break;
-                
+
             case "info":
                 // User typed "/ecadmin info" → display current price & economy stats
                 handleInfo(sender);
                 break;
-                
+
             default:
                 // Unknown subcommand → show help
                 sendHelp(sender);
                 break;
         }
-        
+
         // Return true = we handled it (no "Unknown command" error)
         return true;
     }
-    
+
     /**
      * Sends the admin help message to the sender.
-     * 
+     *
      * @param sender The command sender
      */
     private void sendHelp(CommandSender sender) {
         // Load the "command.admin_help" key from messages.yml and send it
         plugin.getMessageManager().send(sender, "command.admin_help");
     }
-    
+
     /**
      * Handles the "/ecadmin reload" subcommand.
      * Reloads all configuration files, message files, menus, and prices.
-     * 
+     *
      * @param sender The command sender
      */
     private void handleReload(CommandSender sender) {
@@ -121,7 +121,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             plugin.getMenuManager().loadMenus();
             // Reload pricing config (base prices, dynamic pricing settings)
             plugin.getPriceManager().loadConfiguration();
-            
+
             // Send success message to the sender
             plugin.getMessageManager().send(sender, "success.reload");
         } catch (Exception e) {
@@ -131,11 +131,11 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             e.printStackTrace();
         }
     }
-    
+
     /**
      * Handles the "/ecadmin stats [player]" subcommand.
      * Shows total emeralds converted by a player.
-     * 
+     *
      * @param sender The command sender
      * @param args   The full argument array (args[0] = "stats", args[1] = player name)
      */
@@ -148,30 +148,39 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                 sender.sendMessage("§cUsage: /ecadmin stats <player>");
                 return;
             }
-            
+
             // Sender is a player → show their own stats
             Player player = (Player) sender;
             showStats(sender, player);
         } else {
             // A player name was provided → get the OfflinePlayer object
             String playerName = args[1];
-            OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
-            
-            // Check if this player has ever joined the server
-            if (!target.hasPlayedBefore()) {
-                sender.sendMessage("§cPlayer not found: " + playerName);
-                return;
-            }
-            
-            // Player exists → show their stats
-            showStats(sender, target);
+
+            // [SECURITY FIX: MED-04] Mojang lookup runs on async thread to prevent main thread blocking
+            // Bukkit.getOfflinePlayer(String) performs blocking filesystem or Mojang API lookups
+            Bukkit.getScheduler().runTaskAsynchronously(plugin, () -> {
+                @SuppressWarnings("deprecation")
+                OfflinePlayer target = Bukkit.getOfflinePlayer(playerName);
+
+                // Check if this player has ever joined the server
+                if (!target.hasPlayedBefore()) {
+                    // Player not found → send error on main thread
+                    Bukkit.getScheduler().runTask(plugin, () ->
+                            sender.sendMessage("§cPlayer not found: " + playerName)
+                    );
+                    return;
+                }
+
+                // Player exists → show their stats (showStats handles its own async)
+                showStats(sender, target);
+            });
         }
     }
-    
+
     /**
      * Displays player statistics (total emeralds converted).
      * Fetches data asynchronously from storage and sends message when ready.
-     * 
+     *
      * @param sender The command sender (who will receive the message)
      * @param player The player whose stats we're looking up
      */
@@ -181,21 +190,21 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
 
         // Fetch total converted emeralds asynchronously from storage (CompletableFuture)
         plugin.getPlayerStatsStorage().getTotalConverted(player.getUniqueId())
-            // When the data is ready, execute this code
-            .thenAccept(totalConverted ->
-                // Build and send the message with placeholders
-                plugin.getMessageManager().builder("info.stats")
-                    .placeholder("emerald_player_name", playerName)
-                    .placeholder("total", totalConverted)
-                    .send(sender)
-            )
-            // If something goes wrong (database error, etc.), execute this
-            .exceptionally(ex -> {
-                sender.sendMessage("§cError fetching stats: " + ex.getMessage());
-                return null; // Required by exceptionally() — we don't return a value
-            });
+                // When the data is ready, execute this code
+                .thenAccept(totalConverted ->
+                        // Build and send the message with placeholders
+                        plugin.getMessageManager().builder("info.stats")
+                                .placeholder("emerald_player_name", playerName)
+                                .placeholder("total", totalConverted)
+                                .send(sender)
+                )
+                // If something goes wrong (database error, etc.), execute this
+                .exceptionally(ex -> {
+                    sender.sendMessage("§cError fetching stats: " + ex.getMessage());
+                    return null; // Required by exceptionally() — we don't return a value
+                });
     }
-    
+
     /**
      * Handles the "/ecadmin setprice buy|sell price" subcommand.
      * Updates the base buy or sell price in config.yml and reloads the price manager.
@@ -212,11 +221,11 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§cUsage: /ecadmin setprice <buy|sell> <price>");
             return;
         }
-        
+
         // Get the price type (player perspective: buy = player buys, sell = player sells)
         String priceType = args[1].toLowerCase();
         double price;
-        
+
         // Try to parse the price as a double
         try {
             price = Double.parseDouble(args[2]);
@@ -225,13 +234,13 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             plugin.getMessageManager().send(sender, "error.invalid_price");
             return;
         }
-        
+
         // Price must be positive
         if (price <= 0) {
             plugin.getMessageManager().send(sender, "error.invalid_price");
             return;
         }
-        
+
         // Update the config based on price type (player perspective)
         if (priceType.equals("buy")) {
             // Set prices.buy = what player PAYS when buying emeralds
@@ -244,19 +253,19 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             sender.sendMessage("§cInvalid price type. Use 'buy' or 'sell'");
             return;
         }
-        
+
         // Save the updated config to disk
         plugin.saveConfig();
         // Reload price manager so the new values take effect immediately
         plugin.getPriceManager().loadConfiguration();
-        
+
         // Send success message with updated prices
         plugin.getMessageManager().builder("success.price_updated")
                 .placeholder("buy", plugin.getPriceManager().getBuyPrice())
                 .placeholder("sell", plugin.getPriceManager().getSellPrice())
                 .send(sender);
     }
-    
+
     /**
      * Handles the "/ecadmin info" subcommand.
      * Displays current buy/sell prices, dynamic pricing stats, and configured tax groups.
@@ -298,10 +307,10 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
             });
         }
     }
-    
+
     /**
      * Provides tab completion suggestions for /ecadmin commands.
-     * 
+     *
      * @param sender  The command sender
      * @param command The command object
      * @param alias   The command alias used
@@ -328,7 +337,7 @@ public class AdminCommand implements CommandExecutor, TabCompleter {
                     .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                     .collect(Collectors.toList());
         }
-        
+
         // No suggestions for other cases
         return new ArrayList<>();
     }

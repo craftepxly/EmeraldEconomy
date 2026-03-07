@@ -224,8 +224,10 @@ public class PriceManager {
      * Updates the resource depletion factor.
      * More total emeralds transacted = higher scarcity = higher buy price.
      */
+    private long serverStartTime = System.currentTimeMillis();
+
     private void updateDepletionFactor() {
-        long timeSinceStart = System.currentTimeMillis() / 1000;
+        long timeSinceStart = (System.currentTimeMillis() - serverStartTime) / 1000;
         double recoveryFactor = Math.min(1.0, (double) timeSinceStart / depletionRecoveryPeriod);
         double depletionAmount = totalEmeraldsConverted * depletionRate;
         depletionFactor = Math.max(0.1, 1.0 - depletionAmount + (recoveryFactor * 0.5));

@@ -43,7 +43,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Initializes SQLite storage (creates DB file, enables WAL, creates tables).
-     * 
+     *
      * @return CompletableFuture with true if successful, false otherwise
      */
     @Override
@@ -131,27 +131,29 @@ public class SQLiteStorage implements IStorage {
      */
     private void createTables() throws SQLException {
         // SQL to create player_stats table
+        // [SECURITY FIX: CRIT-02] SQLite INTEGER is already 64-bit (up to 8 bytes),
+        // so the column type is safe. The fix is in the Java layer (setLong/getLong).
         String createPlayerStats =
-            "CREATE TABLE IF NOT EXISTS player_stats (" +
-            "    uuid TEXT PRIMARY KEY," +           // Player UUID (primary key)
-            "    player_name TEXT NOT NULL," +       // Player name
-            "    total_converted INTEGER NOT NULL DEFAULT 0," + // Total emeralds converted
-            "    last_updated INTEGER NOT NULL" +    // Last update timestamp
-            ")";
+                "CREATE TABLE IF NOT EXISTS player_stats (" +
+                        "    uuid TEXT PRIMARY KEY," +           // Player UUID (primary key)
+                        "    player_name TEXT NOT NULL," +       // Player name
+                        "    total_converted INTEGER NOT NULL DEFAULT 0," + // Total emeralds converted
+                        "    last_updated INTEGER NOT NULL" +    // Last update timestamp
+                        ")";
 
         // SQL to create transactions_log table
         String createTransactions =
-            "CREATE TABLE IF NOT EXISTS transactions_log (" +
-            "    id INTEGER PRIMARY KEY AUTOINCREMENT," + // Auto-increment ID
-            "    uuid TEXT NOT NULL," +                   // Player UUID
-            "    player_name TEXT NOT NULL," +            // Player name
-            "    transaction_type TEXT NOT NULL," +       // Transaction type (BUY/SELL)
-            "    emerald_amount INTEGER NOT NULL," +      // Emerald amount
-            "    money_amount REAL NOT NULL," +           // Money amount
-            "    price_at_time REAL NOT NULL," +          // Price at transaction time
-            "    transaction_id TEXT NOT NULL UNIQUE," +  // Unique transaction ID
-            "    timestamp INTEGER NOT NULL" +            // Transaction timestamp
-            ")";
+                "CREATE TABLE IF NOT EXISTS transactions_log (" +
+                        "    id INTEGER PRIMARY KEY AUTOINCREMENT," + // Auto-increment ID
+                        "    uuid TEXT NOT NULL," +                   // Player UUID
+                        "    player_name TEXT NOT NULL," +            // Player name
+                        "    transaction_type TEXT NOT NULL," +       // Transaction type (BUY/SELL)
+                        "    emerald_amount INTEGER NOT NULL," +      // Emerald amount
+                        "    money_amount REAL NOT NULL," +           // Money amount
+                        "    price_at_time REAL NOT NULL," +          // Price at transaction time
+                        "    transaction_id TEXT NOT NULL UNIQUE," +  // Unique transaction ID
+                        "    timestamp INTEGER NOT NULL" +            // Transaction timestamp
+                        ")";
 
         // SQL to create index on transactions_log.uuid
         String createIdxUuid       = "CREATE INDEX IF NOT EXISTS idx_transactions_uuid ON transactions_log (uuid)";
@@ -198,7 +200,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Gets player statistics by UUID.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with PlayerStats, or null if not found
      */
@@ -221,12 +223,13 @@ public class SQLiteStorage implements IStorage {
                     try (ResultSet rs = stmt.executeQuery()) {
                         // Check if result exists
                         if (rs.next()) {
-                            // Create and return PlayerStats object
+                            // [SECURITY FIX: CRIT-02] Use getLong for total_converted
+                            // to match PlayerStats(long) constructor after int→long migration
                             return new PlayerStats(
-                                UUID.fromString(rs.getString("uuid")),
-                                rs.getString("player_name"),
-                                rs.getInt("total_converted"),
-                                rs.getLong("last_updated")
+                                    UUID.fromString(rs.getString("uuid")),
+                                    rs.getString("player_name"),
+                                    rs.getLong("total_converted"),
+                                    rs.getLong("last_updated")
                             );
                         }
                     }
@@ -243,7 +246,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Saves player statistics (insert or update).
-     * 
+     *
      * @param stats PlayerStats to save
      * @return CompletableFuture that completes when save is done
      */
@@ -253,12 +256,12 @@ public class SQLiteStorage implements IStorage {
         return CompletableFuture.runAsync(() -> {
             // SQL: INSERT ... ON CONFLICT DO UPDATE (SQLite's upsert syntax)
             String sql =
-                "INSERT INTO player_stats (uuid, player_name, total_converted, last_updated) " +
-                "VALUES (?, ?, ?, ?) " +
-                "ON CONFLICT(uuid) DO UPDATE SET " +
-                "    player_name = excluded.player_name," +
-                "    total_converted = excluded.total_converted," +
-                "    last_updated = excluded.last_updated";
+                    "INSERT INTO player_stats (uuid, player_name, total_converted, last_updated) " +
+                            "VALUES (?, ?, ?, ?) " +
+                            "ON CONFLICT(uuid) DO UPDATE SET " +
+                            "    player_name = excluded.player_name," +
+                            "    total_converted = excluded.total_converted," +
+                            "    last_updated = excluded.last_updated";
 
             try {
                 // Ensure connection is valid
@@ -268,7 +271,8 @@ public class SQLiteStorage implements IStorage {
                     // Set parameters
                     stmt.setString(1, stats.getUuid().toString());
                     stmt.setString(2, stats.getPlayerName());
-                    stmt.setInt(3, stats.getTotalConverted());
+                    // [SECURITY FIX: CRIT-02] Use setLong — getTotalConverted() now returns long
+                    stmt.setLong(3, stats.getTotalConverted());
                     stmt.setLong(4, stats.getLastUpdated());
                     // Execute update
                     stmt.executeUpdate();
@@ -282,7 +286,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Increments player's total converted amount.
-     * 
+     *
      * @param uuid       Player UUID
      * @param playerName Player name
      * @param amount     Amount to add
@@ -294,11 +298,11 @@ public class SQLiteStorage implements IStorage {
         return CompletableFuture.runAsync(() -> {
             // SQL: INSERT ... ON CONFLICT DO UPDATE with increment
             String sql =
-                "INSERT INTO player_stats (uuid, player_name, total_converted, last_updated) " +
-                "VALUES (?, ?, ?, ?) " +
-                "ON CONFLICT(uuid) DO UPDATE SET " +
-                "    total_converted = total_converted + excluded.total_converted," +
-                "    last_updated = excluded.last_updated";
+                    "INSERT INTO player_stats (uuid, player_name, total_converted, last_updated) " +
+                            "VALUES (?, ?, ?, ?) " +
+                            "ON CONFLICT(uuid) DO UPDATE SET " +
+                            "    total_converted = total_converted + excluded.total_converted," +
+                            "    last_updated = excluded.last_updated";
 
             try {
                 // Ensure connection is valid
@@ -308,7 +312,9 @@ public class SQLiteStorage implements IStorage {
                     // Set parameters
                     stmt.setString(1, uuid.toString());
                     stmt.setString(2, playerName);
-                    stmt.setInt(3, amount);
+                    // [SECURITY FIX: CRIT-02] Use setLong to safely widen int amount
+                    // This ensures correct type binding for the INTEGER (64-bit) column
+                    stmt.setLong(3, (long) amount);
                     stmt.setLong(4, System.currentTimeMillis());
                     // Execute update
                     stmt.executeUpdate();
@@ -322,7 +328,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Logs a transaction to database.
-     * 
+     *
      * @param transaction Transaction to log
      * @return CompletableFuture that completes when logging is done
      */
@@ -332,10 +338,10 @@ public class SQLiteStorage implements IStorage {
         return CompletableFuture.runAsync(() -> {
             // SQL: INSERT transaction
             String sql =
-                "INSERT INTO transactions_log " +
-                "(uuid, player_name, transaction_type, emerald_amount, money_amount, " +
-                " price_at_time, transaction_id, timestamp) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+                    "INSERT INTO transactions_log " +
+                            "(uuid, player_name, transaction_type, emerald_amount, money_amount, " +
+                            " price_at_time, transaction_id, timestamp) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
             try {
                 // Ensure connection is valid
@@ -363,7 +369,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Gets total emeralds converted by a player.
-     * 
+     *
      * @param uuid Player UUID
      * @return CompletableFuture with total converted, or 0 if not found
      */
@@ -386,8 +392,10 @@ public class SQLiteStorage implements IStorage {
                     try (ResultSet rs = stmt.executeQuery()) {
                         // Check if result exists
                         if (rs.next()) {
-                            // Return total_converted
-                            return rs.getInt("total_converted");
+                            // [SECURITY FIX: CRIT-02] Use getLong and clamp to int range
+                            // for IStorage interface compatibility (returns Integer)
+                            long value = rs.getLong("total_converted");
+                            return (int) Math.min(value, Integer.MAX_VALUE);
                         }
                     }
                 }
@@ -403,7 +411,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Closes SQLite storage (flushes WAL and shuts down executor).
-     * 
+     *
      * @return CompletableFuture that completes when shutdown is done
      */
     @Override
@@ -459,7 +467,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Checks if SQLite storage is available.
-     * 
+     *
      * @return true if available, false otherwise
      */
     @Override
@@ -475,7 +483,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Gets storage type.
-     * 
+     *
      * @return SQLITE
      */
     @Override
@@ -485,7 +493,7 @@ public class SQLiteStorage implements IStorage {
 
     /**
      * Saves all data (no-op for SQLite, auto-saves).
-     * 
+     *
      * @return CompletableFuture (completes immediately)
      */
     @Override

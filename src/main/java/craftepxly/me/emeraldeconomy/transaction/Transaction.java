@@ -8,14 +8,14 @@ import java.util.concurrent.atomic.AtomicLong;
  * Transaction — represents a single emerald↔money transaction.
  */
 public class Transaction {
-    
+
     // Static counter for generating unique transaction IDs (atomic for thread safety)
     private static final AtomicLong ID_COUNTER = new AtomicLong(0);
     // Base-36 server-start token ensures IDs are unique across restarts
     // (epoch seconds mod 36^4 = 1,679,616 unique epochs before wraparound ~50 days)
     private static final String SESSION_TOKEN = Long.toString(
-        (System.currentTimeMillis() / 1000L) % 1_679_616L, 36).toUpperCase();
-    
+            (System.currentTimeMillis() / 1000L) % 1_679_616L, 36).toUpperCase();
+
     // Transaction unique identifier
     private final String transactionId;
     // Player UUID
@@ -32,10 +32,10 @@ public class Transaction {
     private final double priceAtTime;
     // Transaction timestamp
     private final Instant timestamp;
-    
+
     /**
      * Creates a new Transaction.
-     * 
+     *
      * @param playerUuid    Player UUID
      * @param playerName    Player name
      * @param type          Transaction type
@@ -44,13 +44,13 @@ public class Transaction {
      * @param priceAtTime   Price at time of transaction
      */
     public Transaction(UUID playerUuid, String playerName, TransactionType type,
-                      int emeraldAmount, double moneyAmount, double priceAtTime) {
+                       int emeraldAmount, double moneyAmount, double priceAtTime) {
         // Generate unique transaction ID
         this.transactionId = generateId();
         // Store player UUID in memory
         this.playerUuid = playerUuid;
-        // Store player name in memory
-        this.playerName = playerName;
+        // [SECURITY FIX: HIGH-07] Sanitize player name to prevent log injection
+        this.playerName = sanitizeForLog(playerName);
         // Store transaction type in memory
         this.type = type;
         // Store emerald amount in memory
@@ -62,11 +62,31 @@ public class Transaction {
         // Record current timestamp
         this.timestamp = Instant.now();
     }
-    
+
+    /**
+     * Sanitizes a string for safe log output.
+     * Removes control characters, ANSI escape sequences, and pipe delimiters
+     * to prevent log injection, log forging, and delimiter corruption.
+     *
+     * @param input The raw string to sanitize
+     * @return Sanitized string safe for log output
+     */
+    private static String sanitizeForLog(String input) {
+        // Handle null input
+        if (input == null) return "null";
+        // Remove control characters (newlines, tabs, null bytes, etc.)
+        // Remove ANSI escape sequences (terminal color/cursor codes)
+        // Replace pipe delimiter to prevent log format corruption
+        return input
+                .replaceAll("[\\r\\n\\t\\x00-\\x1F\\x7F]", "")   // Control chars
+                .replaceAll("\\033\\[[0-9;]*[a-zA-Z]", "")        // ANSI escape
+                .replaceAll("\\|", "/");                            // Pipe (delimiter)
+    }
+
     /**
      * Generates a unique transaction ID.
      * Format: ec_<session-token>_<seq>
-     * 
+     *
      * @return Unique transaction ID
      */
     private static String generateId() {
@@ -75,97 +95,98 @@ public class Transaction {
         // Format: ec_<session-token>_<seq> — unique across server restarts
         return String.format("ec_%s_%06d", SESSION_TOKEN, id);
     }
-    
+
     /**
      * Gets transaction ID.
-     * 
+     *
      * @return Transaction ID
      */
     public String getTransactionId() {
         return transactionId;
     }
-    
+
     /**
      * Gets player UUID.
-     * 
+     *
      * @return Player UUID
      */
     public UUID getPlayerUuid() {
         return playerUuid;
     }
-    
+
     /**
      * Gets player name.
-     * 
+     *
      * @return Player name
      */
     public String getPlayerName() {
         return playerName;
     }
-    
+
     /**
      * Gets transaction type.
-     * 
+     *
      * @return Transaction type
      */
     public TransactionType getType() {
         return type;
     }
-    
+
     /**
      * Gets emerald amount.
-     * 
+     *
      * @return Emerald amount
      */
     public int getEmeraldAmount() {
         return emeraldAmount;
     }
-    
+
     /**
      * Gets money amount.
-     * 
+     *
      * @return Money amount
      */
     public double getMoneyAmount() {
         return moneyAmount;
     }
-    
+
     /**
      * Gets price at time of transaction.
-     * 
+     *
      * @return Price per emerald
      */
     public double getPriceAtTime() {
         return priceAtTime;
     }
-    
+
     /**
      * Gets transaction timestamp.
-     * 
+     *
      * @return Timestamp
      */
     public Instant getTimestamp() {
         return timestamp;
     }
-    
+
     /**
      * Returns string representation of transaction.
      * Used for logging to transactions.log file.
-     * 
+     *
      * @return Formatted transaction string
      */
     @Override
     public String toString() {
         // Format: Timestamp | UUID=<uuid> | name=<name> | TYPE=<type> | EMERALD=<amount> | MONEY=<amount> | PRICE=<price> | TXID=<id>
+        // [SECURITY FIX: HIGH-07] playerName is already sanitized in constructor
         return String.format("%s | UUID=%s | name=%s | TYPE=%s | EMERALD=%d | MONEY=%.2f | PRICE=%.2f | TXID=%s",
-            timestamp.toString(),
-            playerUuid.toString(),
-            playerName,
-            type.name(),
-            emeraldAmount,
-            moneyAmount,
-            priceAtTime,
-            transactionId
+                timestamp.toString(),
+                playerUuid.toString(),
+                playerName,
+                type.name(),
+                emeraldAmount,
+                moneyAmount,
+                priceAtTime,
+                transactionId
         );
     }
 }
