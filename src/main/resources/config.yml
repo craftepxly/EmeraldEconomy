@@ -2,7 +2,7 @@
 # Emerald Economy Configuration
 # ========================================
 
-messages_locale: "messages_id"
+messages_locale: "messages_eng"
 
 currency:
   name: "Dollar"
