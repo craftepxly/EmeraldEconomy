@@ -5,9 +5,9 @@
 [![Java](https://img.shields.io/badge/Java-21-orange.svg)](https://adoptium.net/)
 [![Paper](https://img.shields.io/badge/Paper-1.21+-blue.svg)](https://papermc.io/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-3.0.1-brightgreen.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-3.4.0-brightgreen.svg)](CHANGELOG.md)
 
-A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection against exploitation.
+A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection aga[...]
 
 ---
 
@@ -66,7 +66,7 @@ Sell Price = Base Sell Price
 Depletion Factor = max(0.1, 1.0 - (Total Converted × Depletion Rate) + Recovery Bonus)
 ```
 
-The depletion factor simulates emeralds getting harder to find. As more get converted server-wide, the factor drops from 1.0 toward 0.1 (minimum 10%). This reduces buying pressure - the server pays less for emeralds as they become "common." The factor gradually recovers over time (default: 1 hour for full recovery).
+The depletion factor simulates emeralds getting harder to find. As more get converted server-wide, the factor drops from 1.0 toward 0.1 (minimum 10%). This reduces buying pressure - the server pay[...]
 
 ### Transaction Tax (Money Sink)
 
@@ -92,7 +92,7 @@ The taxed money just disappears. This combats inflation - especially useful on s
 
 ### Anti-Manipulation Safeguards
 
-**Max Impact Per Transaction:** Individual trades can't move prices dramatically. By default, only 100 emeralds per transaction count toward price pressure. Someone dumping 1000 emeralds at once affects prices the same as dumping 100.
+**Max Impact Per Transaction:** Individual trades can't move prices dramatically. By default, only 100 emeralds per transaction count toward price pressure. Someone dumping 1000 emeralds at once a[...]
 
 **Price Bounds:** Configured min/max prices (default: $1-$1000) prevent runaway inflation or deflation.
 
@@ -446,7 +446,7 @@ Install PlaceholderAPI to use these anywhere.
 
 %emeraldeconomy_buy_1_cost%         What you'll pay for 1 emerald (with tax)
 %emeraldeconomy_buy_1_tax%          Tax added to buying 1
-%emeraldeconomy_buy_64_cost%        What you'll pay for 64 (with tax)
+%emeraldeconomy_buy_64_cost%        What you'll pay for 64 emeralds (with tax)
 %emeraldeconomy_buy_64_tax%         Tax added to buying 64
 ```
 
@@ -553,15 +553,12 @@ All transactions are logged to `plugins/EmeraldEconomy/transactions.log` with ti
 
 ## API for Developers
 
-Add to your pom.xml:
+Add to your `build.gradle.kts`:
 
-```xml
-<dependency>
-    <groupId>me.craftepxly</groupId>
-    <artifactId>EmeraldEconomy</artifactId>
-    <version>3.0.1</version>
-    <scope>provided</scope>
-</dependency>
+```kotlin
+dependencies {
+    compileOnly("me.craftepxly:EmeraldEconomy:3.4.0")
+}
 ```
 
 Basic usage:
@@ -599,7 +596,7 @@ cd EmeraldEconomy
 # jar is in build/libs/
 ```
 
-Requires Java 21 and Gradle 9.0+
+Requires Java 21 and the included Gradle wrapper.
 
 ---
 
