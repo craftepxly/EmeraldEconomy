@@ -40,6 +40,15 @@ dependencies {
     testImplementation("org.mockito:mockito-inline:5.2.0")
     testImplementation("io.papermc.paper:paper-api:1.21.1-R0.1-SNAPSHOT")
     testImplementation("org.apache.commons:commons-lang3:3.17.0")
+
+    constraints {
+        add("implementation", "org.codehaus.plexus:plexus-utils:4.0.3") {
+            because("CVE-2025-67030: Directory traversal in org.codehaus.plexus.util.Expand (upgrade from 3.5.1 to 4.0.3)")
+        }
+        add("testImplementation", "org.codehaus.plexus:plexus-utils:4.0.3") {
+            because("CVE-2025-67030: Directory traversal in org.codehaus.plexus.util.Expand (upgrade from 3.5.1 to 4.0.3)")
+        }
+    }
 }
 
 tasks {
