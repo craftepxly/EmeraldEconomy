@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-3.4.0-brightgreen.svg)](CHANGELOG.md)
 
-A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection aga[...]
+A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection against[...]
 
 ---
 
@@ -47,18 +47,17 @@ This means prices adjust gradually rather than spiking on single large trades. T
 
 Here's what actually happens when prices update:
 
-**Buy Price (what server pays players):**
+**Buy Price (what players pay server):**
 ```
 Buy Price = Base Buy Price 
           + (Demand Pressure × Demand Sensitivity × Depletion Factor) 
-          - Depletion Penalty
+          + Depletion Premium
 ```
 
-**Sell Price (what players pay server):**
+**Sell Price (what server pays players):**
 ```
 Sell Price = Base Sell Price 
-           - (Supply Pressure × Supply Sensitivity) 
-           + Market Premium
+           - (Supply Pressure × Supply Sensitivity)
 ```
 
 **Resource Depletion:**
@@ -66,33 +65,33 @@ Sell Price = Base Sell Price
 Depletion Factor = max(0.1, 1.0 - (Total Converted × Depletion Rate) + Recovery Bonus)
 ```
 
-The depletion factor simulates emeralds getting harder to find. As more get converted server-wide, the factor drops from 1.0 toward 0.1 (minimum 10%). This reduces buying pressure - the server pay[...]
+The depletion factor simulates emeralds getting harder to find. As more get converted server-wide, the factor drops from 1.0 toward 0.1 (minimum 10%). This primarily makes emeralds more expensive to buy (players pay more) while sell price is pushed mainly by supply pressure.
 
 ### Transaction Tax (Money Sink)
 
 Every trade removes money from the economy:
 
-**When selling emeralds:**
+**When selling emeralds (player receives less):**
 ```
-Player sells: 64 emeralds at $10/ea = $640 gross
-Tax (5%): $640 × 0.05 = $32
-Player receives: $640 - $32 = $608
-Economy loses: $32 (destroyed, not given to anyone)
+Player sells: 64 emeralds at $9.50/ea = $608.00 gross
+Tax (5%): $608.00 × 0.05 = $30.40
+Player receives: $608.00 - $30.40 = $577.60
+Economy loses: $30.40 (destroyed, not given to anyone)
 ```
 
-**When buying emeralds:**
+**When buying emeralds (player pays more):**
 ```
-Player buys: 64 emeralds at $12/ea = $768 base cost
-Tax (5%): $768 × 0.05 = $38.40
-Player pays: $768 + $38.40 = $806.40
-Economy loses: $38.40 (destroyed)
+Player buys: 64 emeralds at $10.00/ea = $640.00 base cost
+Tax (5%): $640.00 × 0.05 = $32.00
+Player pays: $640.00 + $32.00 = $672.00
+Economy loses: $32.00 (destroyed)
 ```
 
 The taxed money just disappears. This combats inflation - especially useful on servers with aggressive mob farms or voting rewards.
 
 ### Anti-Manipulation Safeguards
 
-**Max Impact Per Transaction:** Individual trades can't move prices dramatically. By default, only 100 emeralds per transaction count toward price pressure. Someone dumping 1000 emeralds at once a[...]
+**Max Impact Per Transaction:** Individual trades can't move prices dramatically. By default, only 100 emeralds per transaction count toward price pressure. Someone dumping 1000 emeralds at once affec[...]
 
 **Price Bounds:** Configured min/max prices (default: $1-$1000) prevent runaway inflation or deflation.
 
@@ -100,30 +99,29 @@ The taxed money just disappears. This combats inflation - especially useful on s
 
 ### Real-World Example
 
-**Starting state:**
-- Base buy price: $9.50
-- Base sell price: $10.00
+**Starting state (defaults):**
+- Base buy price (players pay): $10.00
+- Base sell price (players receive): $9.50
 - Depletion: 100% (fresh)
 - Tax: 5%
 
 **Player A sells 200 emeralds over 5 minutes:**
 - Supply pressure builds
-- Sell price drops to ~$9.80
-- Buy price drops slightly to ~$9.30
-- Depletion drops to 98%
-- Tax collected: ~$95 removed from economy
+- Sell price drops slightly below $9.50 (players receive less)
+- Buy price may drift, but remains ≥ sell (spread is enforced)
+- Depletion factor updates over time
+- Tax collected removes money from economy
 
 **One hour later (no activity):**
-- Depletion recovers to 99.5%
+- Depletion recovers toward 100%
 - Prices drift back toward base
-- Supply pressure decays
+- Supply/demand pressure decays (EWMA)
 
 **Player B tries to buy 500 emeralds:**
 - Demand pressure spikes
-- Buy price rises to ~$9.65
+- Buy price rises above $10.00 (players pay more)
 - Only first 100 emeralds affect price (anti-manipulation)
-- Player pays ~$5,075 (including tax)
-- Tax collected: ~$242 removed from economy
+- Player pays base + tax (tax is player-aware if using tax groups)
 
 This creates a living economy where prices reflect actual trading patterns rather than admin-set constants.
 
@@ -137,7 +135,7 @@ This creates a living economy where prices reflect actual trading patterns rathe
 - Money becomes worthless
 
 **EmeraldEconomy:**
-- Admin sets base prices ($9.50 buy, $10.00 sell)
+- Admin sets base prices (default: $10.00 buy, $9.50 sell)
 - Prices adjust based on trading (±20% range typical)
 - Emerald farms still work, but returns diminish over time
 - Tax removes money from circulation
@@ -234,15 +232,16 @@ Players hit `/ec` and get a menu that shows:
 
 ### Smart Pricing
 The plugin tracks every transaction and adjusts prices accordingly:
-- Someone sells 100 emeralds → price drops slightly
-- Someone buys 200 emeralds → price rises slightly
+- Someone sells 100 emeralds → sell price drops slightly (players receive less)
+- Someone buys 200 emeralds → buy price rises slightly (players pay more)
 - EWMA smoothing prevents wild swings
 - Configurable min/max bounds keep things reasonable
+- Buy price is always kept >= sell price (spread) to prevent arbitrage
 
 ### Transaction Tax
 Every trade removes a small percentage from the economy (5% by default):
-- Selling 64 emeralds? You get the value minus 5%
-- Buying 64 emeralds? You pay the cost plus 5%
+- Selling emeralds? You receive the value minus your tax rate
+- Buying emeralds? You pay the cost plus your tax rate
 - The taxed money just disappears - helps control inflation
 
 ### Fill Inventory
@@ -252,11 +251,11 @@ One-click button calculates your available space and buys that many emeralds:
 - Only goes through if you can afford it
 
 ### Resource Depletion
-The more emeralds get converted server-wide, the less valuable they become:
+The more emeralds get converted server-wide, the scarcer they become:
 - Simulates miners exhausting easy veins
 - Gradually recovers over time (configurable)
-- Factors into buy prices (sell prices stay stable)
-- Prevents runaway inflation from emerald farms
+- Primarily increases buy price (players pay more)
+- Helps prevent runaway emerald→money loops
 
 ---
 
@@ -269,7 +268,7 @@ The more emeralds get converted server-wide, the less valuable they become:
 - Any economy plugin (EssentialsX, CMI, etc)
 
 **Optional:**
-- PlaceholderAPI (for the 40 placeholders)
+- PlaceholderAPI (for the placeholders)
 - GeyserMC (if you have Bedrock players)
 
 **Steps:**
@@ -294,30 +293,30 @@ currency:
   name: "Dollar" # Dollar or Emerald
   symbol: "$"
 
-# Starting prices (these will fluctuate)
+# Starting prices (player perspective)
 prices:
-  buy: 9.5   # Server buys emeralds from players at this price
-  sell: 10.0 # Server sells emeralds to players at this price
+  buy: 10.0   # Player PAYS this to buy emeralds from the server
+  sell: 9.5   # Player RECEIVES this when selling emeralds to the server
 
 # Market dynamics
 dynamic_pricing:
   enabled: true
   update_interval: 5  # Recalculate every 5 seconds
-  
+
   # How sensitive prices are to trading
   demand_sensitivity: 0.02  # Higher = more volatile buy prices
   supply_sensitivity: 0.02  # Higher = more volatile sell prices
-  
+
   # Resource depletion (simulates mining difficulty)
   depletion_rate: 0.0001           # How fast emeralds "run out"
   depletion_recovery_seconds: 3600 # How long to recover (1 hour)
-  
+
   # Protection
   max_impact_per_transaction: 100  # Whales can't manipulate prices
-  
+
   # Money sink
-  transaction_tax_rate: 0.05  # 5% tax on all trades
-  
+  transaction_tax_rate: 0.05  # Global fallback tax rate (players may have group rates)
+
   # Safety limits
   min_price: 1.0    # Floor
   max_price: 1000.0 # Ceiling
@@ -412,17 +411,17 @@ info-panel:
 
 ---
 
-## Placeholders (40 total)
+## Placeholders
 
 Install PlaceholderAPI to use these anywhere.
 
 ### Prices & Economy
 ```
-%emeraldeconomy_price_buy%          Current buy price (what server pays)
-%emeraldeconomy_price_sell%         Current sell price (what players pay)
-%emeraldeconomy_base_buy_price%     Base buy price (before adjustments)
-%emeraldeconomy_base_sell_price%    Base sell price (before adjustments)
-%emeraldeconomy_transaction_tax_rate%  Tax rate (e.g., "5.0%")
+%emeraldeconomy_price_buy%          Current buy price (player pays)
+%emeraldeconomy_price_sell%         Current sell price (player receives)
+%emeraldeconomy_base_buy_price%     Base buy price (config prices.buy)
+%emeraldeconomy_base_sell_price%    Base sell price (config prices.sell)
+%emeraldeconomy_transaction_tax_rate%  Global fallback tax rate (e.g., "5.0%")
 %emeraldeconomy_depletion_factor%   Resource depletion (e.g., "95.00%")
 ```
 
@@ -430,43 +429,43 @@ Install PlaceholderAPI to use these anywhere.
 ```
 %emeraldeconomy_player_emeralds%       Emeralds in inventory
 %emeraldeconomy_total_converted%       Lifetime conversions
-%emeraldeconomy_all_sell_value%        Value of all emeralds in inventory
+%emeraldeconomy_all_sell_value%        Gross value of all emeralds in inventory (before tax)
 %emeraldeconomy_inventory_buy_space%   How many emeralds fit in inventory
 ```
 
 ### Transaction Previews
 ```
-%emeraldeconomy_sell_1_value%       What you'll get for selling 1 (after tax)
+%emeraldeconomy_sell_1_value%       Net money received for selling 1 (after tax)
 %emeraldeconomy_sell_1_tax%         Tax deducted from selling 1
-%emeraldeconomy_sell_64_value%      What you'll get for selling 64 (after tax)
+%emeraldeconomy_sell_64_value%      Net money received for selling 64 (after tax)
 %emeraldeconomy_sell_64_tax%        Tax deducted from selling 64
-%emeraldeconomy_sell_all_value%     What you'll get for selling everything
+%emeraldeconomy_sell_all_value%     Net money received for selling everything (after tax)
 %emeraldeconomy_sell_all_tax%       Tax deducted from selling everything
 %emeraldeconomy_sell_all_count%     Total emeralds in inventory
 
-%emeraldeconomy_buy_1_cost%         What you'll pay for 1 emerald (with tax)
+%emeraldeconomy_buy_1_cost%         Total cost to buy 1 (with tax)
 %emeraldeconomy_buy_1_tax%          Tax added to buying 1
-%emeraldeconomy_buy_64_cost%        What you'll pay for 64 emeralds (with tax)
+%emeraldeconomy_buy_64_cost%        Total cost to buy 64 (with tax)
 %emeraldeconomy_buy_64_tax%         Tax added to buying 64
 ```
 
 ### Stack Values
 ```
-%emeraldeconomy_stack_sell_value%   Value of 64 emeralds (gross, before tax)
-%emeraldeconomy_stack_buy_value%    Cost of 64 emeralds (base, before tax)
+%emeraldeconomy_stack_sell_value%   Gross value of 64 emeralds at sell price (before tax)
+%emeraldeconomy_stack_buy_value%    Base cost of 64 emeralds at buy price (before tax)
 ```
 
 ### Fill Inventory
 ```
-%emeraldeconomy_inventory_buy_value%           Base cost to fill inventory
+%emeraldeconomy_inventory_buy_value%           Base cost to fill inventory (before tax)
 %emeraldeconomy_inventory_buy_value_with_tax%  Total cost to fill (with tax)
 %emeraldeconomy_inventory_buy_tax%             Tax for filling inventory
 ```
 
 ### Affordability Checks (Localized)
 ```
-%emeraldeconomy_can_afford_1_emerald%        "✔ Yes" or "✘ No" (English)
-%emeraldeconomy_can_afford_64_emeralds%      "✔ Mampu" or "✘ Tidak Mampu" (Indo)
+%emeraldeconomy_can_afford_1_emerald%        "✔" or "✘"
+%emeraldeconomy_can_afford_64_emeralds%      "✔" or "✘"
 %emeraldeconomy_can_afford_inventory_fill%   Shows if player can afford to fill
 %emeraldeconomy_has_1_emerald%               Does player have 1 emerald?
 %emeraldeconomy_has_64_emeralds%             Does player have 64 emeralds?
@@ -567,9 +566,11 @@ Basic usage:
 EmeraldEconomy plugin = (EmeraldEconomy) Bukkit.getPluginManager()
     .getPlugin("EmeraldEconomy");
 
-// Get prices
-double buyPrice = plugin.getPriceManager().getBuyPrice();
-double sellPrice = plugin.getPriceManager().getSellPrice();
+// Get prices (player perspective)
+double buyPrice = plugin.getPriceManager().getBuyPrice();   // player pays
+double sellPrice = plugin.getPriceManager().getSellPrice(); // player receives
+
+// Get tax
 double tax = plugin.getPriceManager().getTransactionTax(amount);
 
 // Execute trade
