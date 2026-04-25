@@ -7,7 +7,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-3.4.0-brightgreen.svg)](CHANGELOG.md)
 
-A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection against[...]
+A Minecraft economy plugin that actually makes sense. Players can trade emeralds for server currency through a clean GUI, complete with supply-demand pricing, transaction taxes, and protection against inflation
 
 ---
 
